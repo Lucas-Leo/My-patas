@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "my-agenda",
-    "slug": "my-agenda",
+    "name": "my-patas",
+    "slug": "my-patas",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "myagenda",
+    "scheme": "mypatas",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
