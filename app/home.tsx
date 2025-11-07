@@ -106,9 +106,9 @@ const SwipeScreen = () => {
 
       <View style={styles.footer}>
         <Ionicons name="home-outline" size={28} color="#0E457D" />
-        <Ionicons name="chatbubble-ellipses-outline" size={28} color="gray" />
-        <Ionicons name="heart-outline" size={28} color="gray" onPress={() => console.log('Ver favoritos:', favorites)} />
-        <Ionicons name="person-outline" size={28} color="gray" />
+        <Ionicons name="chatbubble-ellipses-outline" size={28} color="#0E457D" />
+        <Ionicons name="heart-outline" size={28} color="#0E457D" onPress={() => console.log('Ver favoritos:', favorites)} />
+        <Ionicons name="person-outline" size={28} color="#0E457D" />
       </View>
     </SafeAreaView>
   );
@@ -194,10 +194,10 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   skipButton: {
-    backgroundColor: '#FF2BAA',
+    backgroundColor: '#0E457D',
   },
   likeButton: {
-    backgroundColor: '#0E457D',
+    backgroundColor: '#FF2BAA',
   },
   //acabou os pets
   noMorePets: {

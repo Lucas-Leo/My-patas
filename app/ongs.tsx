@@ -142,7 +142,7 @@ export default function OngsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>ONGs</Text>
+        <Text style={styles.title}>ONGS</Text>
         {ONGS.map((ong) => (
           <OngCard
             key={ong.id}
@@ -186,8 +186,9 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: 'bold',
-    color: '#0E457D',
+    color: '#FF2BAA',
     marginBottom: 10,
+    textAlign: 'center',
   },
   card: {
     backgroundColor: '#fff',

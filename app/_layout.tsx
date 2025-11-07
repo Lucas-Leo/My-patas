@@ -21,13 +21,14 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       
       <Stack>
-        <Stack.Screen name="ongs" options={{ headerShown: false }} />
-        <Stack.Screen name="home" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> 
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="criarconta" options={{ headerShown: false }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />
         <Stack.Screen name="registerONG" options={{ headerShown: false }} /> 
+        <Stack.Screen name="home" options={{ headerShown: false }} />
+        <Stack.Screen name="ongs" options={{ headerShown: false }} />
+        <Stack.Screen name="sobrenos" options={{ headerShown: false }} />
                   
         <Stack.Screen name="+not-found" />   
       </Stack>
