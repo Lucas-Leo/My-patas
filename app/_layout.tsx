@@ -29,6 +29,7 @@ export default function RootLayout() {
         <Stack.Screen name="home" options={{ headerShown: false }} />
         <Stack.Screen name="ongs" options={{ headerShown: false }} />
         <Stack.Screen name="sobrenos" options={{ headerShown: false }} />
+        <Stack.Screen name="quests" options={{ headerShown: false }} />
                   
         <Stack.Screen name="+not-found" />   
       </Stack>
