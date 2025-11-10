@@ -18,9 +18,18 @@ const initialPets = [
   { id: 1, name: 'Luke', ong: 'ONG1 - Paz e Amor', image: require('@/assets/images/cachorro01.jpg') },
   { id: 2, name: 'Princesa', ong: 'ONG Amigo Fiel', image: require('@/assets/images/cachorro02.jpg') },
   { id: 3, name: 'Max', ong: 'Abrigo do Coração', image: require('@/assets/images/cachorro03.jpg') },
+  { id: 4, name: 'Theo', ong: 'Abrigo do Coração', image: require('@/assets/images/cachorro04.jpg') },
+  { id: 5, name: 'Dalila', ong: 'Amigos de quatro patas', image: require('@/assets/images/cachorro05.jpg') },
+  { id: 6, name: 'Billy', ong: 'Aumigos', image: require('@/assets/images/cachorro06.jpg') },
+
+  { id: 1, name: 'Mingau', ong: 'ONG1 - Paz e Amor', image: require('@/assets/images/gato01.jpg') },
+  { id: 2, name: 'Salem', ong: 'ONG Amigo Fiel', image: require('@/assets/images/gato02.jpg') },
+  { id: 3, name: 'Matheo', ong: 'Abrigo do Coração', image: require('@/assets/images/gato03.jpg') },
+  { id: 4, name: 'Garfield', ong: 'Abrigo do Coração', image: require('@/assets/images/gato04.jpg') },
+  { id: 5, name: 'Kity', ong: 'Amigos de quatro patas', image: require('@/assets/images/gato05.jpg') },
+  { id: 6, name: 'Chicó', ong: 'Aumigos', image: require('@/assets/images/gato06.jpg') },
 ];
 
-// card
 const PetCard = ({ pet }) => (
   <View style={styles.cardContainer}>
     <Image source={pet.image} style={styles.petImage} resizeMode="cover" />
@@ -104,12 +113,6 @@ const SwipeScreen = () => {
         )}
       </View>
 
-      <View style={styles.footer}>
-        <Ionicons name="home-outline" size={28} color="#0E457D" />
-        <Ionicons name="chatbubble-ellipses-outline" size={28} color="#0E457D" />
-        <Ionicons name="heart-outline" size={28} color="#0E457D" onPress={() => console.log('Ver favoritos:', favorites)} />
-        <Ionicons name="person-outline" size={28} color="#0E457D" />
-      </View>
     </SafeAreaView>
   );
 };
@@ -119,6 +122,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f8f8',
   },
+
   header: {
     flex: 3 / 10,
     width: '100%',
@@ -127,15 +131,18 @@ const styles = StyleSheet.create({
     padding: 20,
 
   },
+
   logo: {
     width: 200,
      height: 90,
    },
+
   mainContent: {
     flex: 1,
     alignItems: 'center',
  
   },
+
   cardContainer: {
     width: width * 0.9, 
     aspectRatio: 1 / 1.3, 
@@ -150,11 +157,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
+
   petImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
   },
+
   infoBox: {
     position: 'absolute',
     bottom: 0,
@@ -162,16 +171,19 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
+
   petName: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
+
   petONG: {
     fontSize: 16,
     color: '#0E457D',
     fontWeight: '600',
   },
+
   // botoes like e skip
   actionButtons: {
     flexDirection: 'row',
@@ -181,6 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     zIndex: 10,
   },
+
   button: {
     width: 70,
     height: 70,
@@ -192,33 +205,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
+    marginBottom: 55,
   },
+
   skipButton: {
     backgroundColor: '#0E457D',
   },
+
   likeButton: {
     backgroundColor: '#FF2BAA',
   },
+
   //acabou os pets
   noMorePets: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   noMoreText: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 10,
   },
-  //menu
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 28,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
+
 });
 
 export default SwipeScreen;

@@ -25,7 +25,6 @@ const ONGS = [
     imagem: require('@/assets/images/ong01.png'),
     pets: [
       { id: 'p1', nome: 'Luke', idade: '2 anos', porte: 'Médio', vacinado: true },
-      { id: 'p2', nome: 'Mia', idade: '1 ano', porte: 'Pequeno', vacinado: false },
     ],
   },
   {
@@ -47,6 +46,7 @@ const ONGS = [
       { id: 'p5', nome: 'Thor', idade: '4 anos', porte: 'Grande', vacinado: false },
     ],
   },
+  
 ];
 
 const OngCard = ({ ong, expanded, onPress }) => {
@@ -57,14 +57,13 @@ const OngCard = ({ ong, expanded, onPress }) => {
       toValue: expanded ? 1 : 0,
       duration: 300,
       easing: Easing.ease,
-      useNativeDriver: false, // importante para animar layout
+      useNativeDriver: false, 
     }).start();
   }, [expanded]);
 
-  // anima a altura máxima do conteúdo (sem erros)
   const animatedMaxHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, ong.pets.length * 110], // altura aproximada
+    outputRange: [0, ong.pets.length * 110], 
   });
 
   const animatedOpacity = animation.interpolate({
@@ -87,7 +86,6 @@ const OngCard = ({ ong, expanded, onPress }) => {
         />
       </TouchableOpacity>
 
-      {/* Conteúdo animado dentro do card */}
       <Animated.View
         style={[
           styles.expandedContent,
@@ -154,12 +152,6 @@ export default function OngsScreen() {
         <View style={{ height: 80 }} />
       </ScrollView>
 
-      <View style={styles.footer}>
-        <Ionicons name="home-outline" size={28} color="#0E457D" />
-        <Ionicons name="chatbubble-ellipses-outline" size={28} color="gray" />
-        <Ionicons name="heart-outline" size={28} color="gray" />
-        <Ionicons name="person-outline" size={28} color="gray" />
-      </View>
     </SafeAreaView>
   );
 }
@@ -171,18 +163,22 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     paddingHorizontal: 20,
   },
+
   header: {
     alignItems: 'center',
     paddingVertical: 30,
     marginTop: 20,
   },
+
   logo: {
     width: 200,
     height: 90,
   },
+
   scroll: {
     paddingHorizontal: 10,
   },
+
   title: {
     fontSize: 26,
     fontWeight: 'bold',
@@ -190,6 +186,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     textAlign: 'center',
   },
+
   card: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -202,31 +199,38 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#eee',
     overflow: 'hidden',
+    paddingBottom: 10,
   },
+
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 25,
   },
+
   ongImage: {
     width: 60,
     height: 60,
     borderRadius: 10,
     marginRight: 15,
   },
+
   ongTextBox: {
     flex: 1,
   },
+
   ongName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#0E457D',
   },
+
   ongDesc: {
     fontSize: 15,
     color: '#555',
     marginTop: 4,
   },
+
   expandedContent: {
     backgroundColor: '#fff',
     overflow: 'hidden',
@@ -234,45 +238,45 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#EEE',
   },
+
   petTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#0E457D',
     marginVertical: 10,
   },
+
   petRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 6,
   },
+
   petInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+
   petName: {
     fontSize: 17,
     fontWeight: 'bold',
     color: '#333',
   },
+  
   petDetails: {
     fontSize: 15,
     color: '#555',
   },
+
   petVacinado: {
     fontSize: 14,
     fontWeight: '600',
   },
+
   heartButton: {
     padding: 8,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 25,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-    backgroundColor: '#fff',
-  },
+
 });

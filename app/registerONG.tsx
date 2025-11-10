@@ -237,7 +237,7 @@ export const styles = StyleSheet.create({
   },
 
   button: {
-    marginTop: 45,
+    marginTop: 10,
     backgroundColor: "#0E457D",
     width: "100%",
     height: 50,
@@ -257,6 +257,7 @@ export const styles = StyleSheet.create({
     gap: 3,
   }
   , 
+
   iconPassword :{
     alignItems : "center",
     justifyContent: "center"
