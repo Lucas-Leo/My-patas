@@ -25,6 +25,7 @@ const ONGS = [
     imagem: require('@/assets/images/ong01.png'),
     pets: [
       { id: 'p1', nome: 'Luke', idade: '2 anos', porte: 'Médio', vacinado: true },
+      { id: 'p2', nome: 'Mingau', idade: '3 anos', porte: 'Médio', vacinado: true },
     ],
   },
   {
@@ -33,7 +34,8 @@ const ONGS = [
     descricao: 'Promovendo adoções conscientes e felizes.',
     imagem: require('@/assets/images/ong02.png'),
     pets: [
-      { id: 'p3', nome: 'Rex', idade: '3 anos', porte: 'Grande', vacinado: true },
+      { id: 'p3', nome: 'Princesa', idade: '2 anos', porte: 'Médio', vacinado: true },
+      { id: 'p4', nome: 'Salem', idade: '1 ano', porte: 'Médio', vacinado: false },
     ],
   },
   {
@@ -42,11 +44,34 @@ const ONGS = [
     descricao: 'Um lar temporário para quem mais precisa.',
     imagem: require('@/assets/images/ong03.png'),
     pets: [
-      { id: 'p4', nome: 'Luna', idade: '5 meses', porte: 'Pequeno', vacinado: true },
-      { id: 'p5', nome: 'Thor', idade: '4 anos', porte: 'Grande', vacinado: false },
+      { id: 'p5', nome: 'Max', idade: '3 anos', porte: 'Pequeno', vacinado: true },
+      { id: 'p6', nome: 'Theo', idade: '4 anos', porte: 'Médio', vacinado: true },
+      { id: 'p7', nome: 'Matheo', idade: '3 anos', porte: 'Grande', vacinado: true },
+      { id: 'p8', nome: 'Guarfield', idade: '3 anos', porte: 'Pequeno', vacinado: true },
+    ],
+  },
+
+  {
+    id: '4',
+    nome: 'Amigos de quatro patas',
+    descricao: 'Não compre adote um animalzinho!',
+    imagem: require('@/assets/images/ong4.png'),
+    pets: [
+      { id: 'p9', nome: 'Dalila', idade: '3 anos', porte: 'Médio', vacinado: true },
+      { id: 'p10', nome: 'Kity', idade: '5 meses', porte: 'Médio', vacinado: false },
     ],
   },
   
+  {
+    id: '5',
+    nome: 'Aumigos',
+    descricao: 'Adote um AUmigo!',
+    imagem: require('@/assets/images/ong05.png'),
+    pets: [
+      { id: 'p11', nome: 'Billy', idade: '3 anos', porte: 'Médio', vacinado: true },
+      { id: 'p12', nome: 'Chicó', idade: '6 meses', porte: 'Médio', vacinado: false },
+    ],
+  },
 ];
 
 const OngCard = ({ ong, expanded, onPress }) => {
