@@ -11,7 +11,8 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Fontisto } from '@expo/vector-icons';
+import { router, useRouter } from "expo-router";
 
 const { width } = Dimensions.get('window');
 
@@ -145,6 +146,7 @@ const OngCard = ({ ong, expanded, onPress }) => {
               <Ionicons name="heart-outline" size={24} color="#FF2BAA" />
             </TouchableOpacity>
           </View>
+ 
         ))}
       </Animated.View>
     </View>
@@ -176,6 +178,30 @@ export default function OngsScreen() {
         ))}
         <View style={{ height: 80 }} />
       </ScrollView>
+
+      <View style={styles.footer}>
+
+        <TouchableOpacity style={styles.iconsFooter}>
+          <Ionicons name="home-sharp" size={28} color="#0E457D" />
+          <Text style={styles.iconsText}>Início</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.iconsFooter}>
+          <Ionicons name="paw" size={30} color="#0E457D" />
+          <Text style={styles.iconsText}>ONGS</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.iconsFooter}>
+          <Fontisto name="heart" size={25} color="#0E457D" />
+          <Text style={styles.iconsText}>Favoritos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.iconsFooter}>
+          <Ionicons name="person-sharp" size={30} color="#0E457D" />
+          <Text style={styles.iconsText}>Perfil</Text>
+        </TouchableOpacity>
+        
+      </View>
 
     </SafeAreaView>
   );
@@ -302,6 +328,26 @@ const styles = StyleSheet.create({
 
   heartButton: {
     padding: 8,
+  },
+
+  //menu
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#43474bff',
+    backgroundColor: '#fff',
+  },
+  
+  iconsFooter: {
+    alignItems: 'center',
+    gap: 2,
+  },
+
+  iconsText: {
+    fontWeight: 'bold',
   },
 
 });

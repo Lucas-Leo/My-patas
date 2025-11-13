@@ -8,7 +8,7 @@ import {
   SafeAreaView,
   Dimensions,
 } from 'react-native';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { Ionicons, Fontisto } from '@expo/vector-icons';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 
@@ -93,7 +93,7 @@ const SwipeScreen = () => {
                 style={[styles.button, styles.skipButton]}
                 onPress={handleSkip}
               >
-                <AntDesign name="close" size={32} color="white" />
+                <Ionicons name="close-sharp" size={38} color="white" />
               </TouchableOpacity>
 
               {/* botao de coração */}
@@ -101,7 +101,7 @@ const SwipeScreen = () => {
                 style={[styles.button, styles.likeButton]}
                 onPress={handleLike}
               >
-                <AntDesign name="heart" size={32} color="white" />
+                <Fontisto name="heart" size={28} color="white" />
               </TouchableOpacity>
             </View>
           </>
@@ -113,6 +113,30 @@ const SwipeScreen = () => {
         )}
       </View>
 
+      <View style={styles.footer}>
+
+        <View style={styles.iconsFooter}>
+          <Ionicons name="home-sharp" size={28} color="#0E457D" />
+          <Text style={styles.iconsText}>Início</Text>
+        </View>
+
+        <View style={styles.iconsFooter}>
+          <Ionicons name="paw" size={30} color="#0E457D" />
+          <Text style={styles.iconsText}>ONGS</Text>
+        </View>
+
+        <View style={styles.iconsFooter}>
+          <Fontisto name="heart" size={25} color="#0E457D" />
+          <Text style={styles.iconsText}>Favoritos</Text>
+        </View>
+
+        <View style={styles.iconsFooter}>
+          <Ionicons name="person-sharp" size={30} color="#0E457D" />
+          <Text style={styles.iconsText}>Perfil</Text>
+        </View>
+        
+      </View>
+
     </SafeAreaView>
   );
 };
@@ -122,27 +146,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f8f8',
   },
-
   header: {
     flex: 3 / 10,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-
   },
-
   logo: {
     width: 200,
      height: 90,
    },
-
   mainContent: {
     flex: 1,
     alignItems: 'center',
- 
   },
-
   cardContainer: {
     width: width * 0.9, 
     aspectRatio: 1 / 1.3, 
@@ -157,13 +175,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-
   petImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
   },
-
   infoBox: {
     position: 'absolute',
     bottom: 0,
@@ -171,19 +187,16 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
-
   petName: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
-
   petONG: {
     fontSize: 16,
     color: '#0E457D',
     fontWeight: '600',
   },
-
   // botoes like e skip
   actionButtons: {
     flexDirection: 'row',
@@ -193,7 +206,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     zIndex: 10,
   },
-
   button: {
     width: 70,
     height: 70,
@@ -205,30 +217,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
-    marginBottom: 55,
   },
-
   skipButton: {
     backgroundColor: '#0E457D',
   },
-
   likeButton: {
     backgroundColor: '#FF2BAA',
   },
-
   //acabou os pets
   noMorePets: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   noMoreText: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 10,
   },
-
+  //menu
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#43474bff',
+    backgroundColor: '#fff',
+  },
+  iconsFooter: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  iconsText: {
+    fontWeight: 'bold',
+  },
 });
 
 export default SwipeScreen;

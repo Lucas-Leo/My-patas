@@ -9,7 +9,7 @@ import {
   Dimensions,
   ScrollView, // rolagem de conteúdo
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, Fontisto } from '@expo/vector-icons';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png"); 
 
@@ -85,6 +85,30 @@ export default function QuestsScreen() {
                 <View style={{ height: 20 }} /> 
                 
             </ScrollView>
+
+                <View style={styles.footer}>
+
+                    <View style={styles.iconsFooter}>
+                    <Ionicons name="home-sharp" size={28} color="#0E457D" />
+                    <Text style={styles.iconsText}>Início</Text>
+                    </View>
+
+                    <View style={styles.iconsFooter}>
+                    <Ionicons name="paw" size={30} color="#0E457D" />
+                    <Text style={styles.iconsText}>ONGS</Text>
+                    </View>
+
+                    <View style={styles.iconsFooter}>
+                    <Fontisto name="heart" size={25} color="#0E457D" />
+                    <Text style={styles.iconsText}>Favoritos</Text>
+                    </View>
+
+                    <View style={styles.iconsFooter}>
+                    <Ionicons name="person-sharp" size={30} color="#0E457D" />
+                    <Text style={styles.iconsText}>Perfil</Text>
+                    </View>
+                    
+                </View>
         </SafeAreaView>
     );
 };
@@ -159,5 +183,22 @@ const styles = StyleSheet.create({
     tabButton: {
       padding: 10,
       alignItems: 'center',
-    }
+    },
+    //menu
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#43474bff',
+    backgroundColor: '#fff',
+  },
+  iconsFooter: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  iconsText: {
+    fontWeight: 'bold',
+  }
 });
