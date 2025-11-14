@@ -12,6 +12,7 @@ import {
   Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -50,7 +51,6 @@ const ONGS = [
       { id: 'p8', nome: 'Guarfield', idade: '3 anos', porte: 'Pequeno', vacinado: true },
     ],
   },
-
   {
     id: '4',
     nome: 'Amigos de quatro patas',
@@ -61,7 +61,6 @@ const ONGS = [
       { id: 'p10', nome: 'Kity', idade: '5 meses', porte: 'Médio', vacinado: false },
     ],
   },
-  
   {
     id: '5',
     nome: 'Aumigos',
@@ -82,13 +81,13 @@ const OngCard = ({ ong, expanded, onPress }) => {
       toValue: expanded ? 1 : 0,
       duration: 300,
       easing: Easing.ease,
-      useNativeDriver: false, 
+      useNativeDriver: false,
     }).start();
   }, [expanded]);
 
   const animatedMaxHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, ong.pets.length * 110], 
+    outputRange: [0, ong.pets.length * 110],
   });
 
   const animatedOpacity = animation.interpolate({
@@ -104,11 +103,7 @@ const OngCard = ({ ong, expanded, onPress }) => {
           <Text style={styles.ongName}>{ong.nome}</Text>
           <Text style={styles.ongDesc}>{ong.descricao}</Text>
         </View>
-        <Ionicons
-          name={expanded ? 'chevron-up' : 'chevron-down'}
-          size={24}
-          color="#0E457D"
-        />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={24} color="#0E457D" />
       </TouchableOpacity>
 
       <Animated.View
@@ -174,19 +169,37 @@ export default function OngsScreen() {
             onPress={() => toggleExpand(ong.id)}
           />
         ))}
-        <View style={{ height: 80 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      <View style={styles.bottomNav}>
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
+          <Image source={require('@/assets/images/home.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/ongs")}>
+          <Image source={require('@/assets/images/ongs.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/favoritos")}>
+          <Image source={require('@/assets/images/coracao.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil")}>
+          <Image source={require('@/assets/images/perfil.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+      </View>
 
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     marginTop: 45,
     backgroundColor: "#ffffff",
-    paddingHorizontal: 20,
   },
 
   header: {
@@ -243,7 +256,7 @@ const styles = StyleSheet.create({
   ongTextBox: {
     flex: 1,
   },
-
+  
   ongName: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -289,7 +302,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  
+
   petDetails: {
     fontSize: 15,
     color: '#555',
@@ -299,9 +312,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-
+  
   heartButton: {
     padding: 8,
   },
 
+  bottomNav: {
+    width: '100%',
+    height: 70,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 15,
+  },
+  navItem: {
+    padding: 10,
+  },
+  navIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
+    tintColor: '#0E457D',
+  },
 });

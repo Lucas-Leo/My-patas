@@ -8,10 +8,10 @@ import {
   SafeAreaView,
   Dimensions,
 } from 'react-native';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
+import { useRouter } from "expo-router";
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
-
 const { width } = Dimensions.get('window');
 
 const initialPets = [
@@ -22,12 +22,12 @@ const initialPets = [
   { id: 5, name: 'Dalila', ong: 'Amigos de quatro patas', image: require('@/assets/images/cachorro05.jpg') },
   { id: 6, name: 'Billy', ong: 'Aumigos', image: require('@/assets/images/cachorro06.jpg') },
 
-  { id: 1, name: 'Mingau', ong: 'ONG1 - Paz e Amor', image: require('@/assets/images/gato01.jpg') },
-  { id: 2, name: 'Salem', ong: 'ONG Amigo Fiel', image: require('@/assets/images/gato02.jpg') },
-  { id: 3, name: 'Matheo', ong: 'Abrigo do Coração', image: require('@/assets/images/gato03.jpg') },
-  { id: 4, name: 'Garfield', ong: 'Abrigo do Coração', image: require('@/assets/images/gato04.jpg') },
-  { id: 5, name: 'Kity', ong: 'Amigos de quatro patas', image: require('@/assets/images/gato05.jpg') },
-  { id: 6, name: 'Chicó', ong: 'Aumigos', image: require('@/assets/images/gato06.jpg') },
+  { id: 7, name: 'Mingau', ong: 'ONG1 - Paz e Amor', image: require('@/assets/images/gato01.jpg') },
+  { id: 8, name: 'Salem', ong: 'ONG Amigo Fiel', image: require('@/assets/images/gato02.jpg') },
+  { id: 9, name: 'Matheo', ong: 'Abrigo do Coração', image: require('@/assets/images/gato03.jpg') },
+  { id: 10, name: 'Garfield', ong: 'Abrigo do Coração', image: require('@/assets/images/gato04.jpg') },
+  { id: 11, name: 'Kity', ong: 'Amigos de quatro patas', image: require('@/assets/images/gato05.jpg') },
+  { id: 12, name: 'Chicó', ong: 'Aumigos', image: require('@/assets/images/gato06.jpg') },
 ];
 
 const PetCard = ({ pet }) => (
@@ -42,28 +42,16 @@ const PetCard = ({ pet }) => (
 );
 
 const SwipeScreen = () => {
-  const [pets, setPets] = useState(initialPets); // lista de pets a serem exibidos
-  const [favorites, setFavorites] = useState([]); // lista de pets favoritos
+  const router = useRouter();
 
-  // pet que está no topo da pilha
+  const [pets, setPets] = useState(initialPets);
+  const [favorites, setFavorites] = useState([]);
+
   const currentPet = pets[0];
 
-  /**
-   * função para processar as ações like e skip
-   * @param {string} action - like ou skip
-   */
   const handleAction = (action) => {
-    if (!currentPet) return; // se nao tiver pets nao faz nada
-
-    // favoritar
-    if (action === 'like') {
-      setFavorites(prevFavorites => [...prevFavorites, currentPet]);
-      console.log(`Adicionado aos favoritos: ${currentPet.name}`);
-    } else {
-      console.log(`Pulado: ${currentPet.name}`);
-    }
-
-    // remover o pet e passar para o proximo
+    if (!currentPet) return;
+    if (action === 'like') setFavorites(prev => [...prev, currentPet]);
     setPets(prevPets => prevPets.slice(1));
   };
 
@@ -72,35 +60,22 @@ const SwipeScreen = () => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header} >
 
-        <Image
-          height={50}
-          width={100}
-          source={logoApp}
-          style={styles.logo}
-        />
-
+      <View style={styles.header}>
+        <Image height={50} width={100} source={logoApp} style={styles.logo} />
       </View>
 
       <View style={styles.mainContent}>
         {currentPet ? (
           <>
             <PetCard pet={currentPet} />
+
             <View style={styles.actionButtons}>
-              {/* botao X */}
-              <TouchableOpacity
-                style={[styles.button, styles.skipButton]}
-                onPress={handleSkip}
-              >
+              <TouchableOpacity style={[styles.button, styles.skipButton]} onPress={handleSkip}>
                 <AntDesign name="close" size={32} color="white" />
               </TouchableOpacity>
 
-              {/* botao de coração */}
-              <TouchableOpacity
-                style={[styles.button, styles.likeButton]}
-                onPress={handleLike}
-              >
+              <TouchableOpacity style={[styles.button, styles.likeButton]} onPress={handleLike}>
                 <AntDesign name="heart" size={32} color="white" />
               </TouchableOpacity>
             </View>
@@ -113,6 +88,26 @@ const SwipeScreen = () => {
         )}
       </View>
 
+      <View style={styles.bottomNav}>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
+          <Image source={require('@/assets/images/home.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/ongs")}>
+          <Image source={require('@/assets/images/ongs.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/favoritos")}>
+          <Image source={require('@/assets/images/coracao.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil")}>
+          <Image source={require('@/assets/images/perfil.png')} style={styles.navIcon} />
+        </TouchableOpacity>
+
+      </View>
+
     </SafeAreaView>
   );
 };
@@ -122,30 +117,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f8f8',
   },
-
   header: {
-    flex: 3 / 10,
+    flex: 0.25,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-
   },
-
   logo: {
     width: 200,
-     height: 90,
-   },
-
+    height: 90,
+  },
   mainContent: {
     flex: 1,
     alignItems: 'center',
- 
   },
-
   cardContainer: {
-    width: width * 0.9, 
-    aspectRatio: 1 / 1.3, 
+    width: width * 0.9,
+    aspectRatio: 1 / 1.3,
     borderRadius: 15,
     backgroundColor: '#fff',
     shadowColor: '#000',
@@ -157,13 +146,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ddd',
   },
-
   petImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
   },
-
   infoBox: {
     position: 'absolute',
     bottom: 0,
@@ -171,20 +158,16 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
-
   petName: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#333',
   },
-
   petONG: {
     fontSize: 16,
     color: '#0E457D',
     fontWeight: '600',
   },
-
-  // botoes like e skip
   actionButtons: {
     flexDirection: 'row',
     position: 'absolute',
@@ -193,42 +176,59 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     zIndex: 10,
   },
-
   button: {
     width: 70,
     height: 70,
     borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#c224a0ff',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
-    marginBottom: 55,
+    marginBottom: 30,
   },
-
   skipButton: {
     backgroundColor: '#0E457D',
   },
-
   likeButton: {
     backgroundColor: '#FF2BAA',
   },
-
-  //acabou os pets
   noMorePets: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-
   noMoreText: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 10,
   },
-
+  bottomNav: {
+    width: '100%',
+    height: 70,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 15,
+  },
+  navItem: {
+    padding: 10,
+  },
+  navIcon: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
+    tintColor: '#0E457D',
+  },
 });
 
 export default SwipeScreen;

@@ -16,35 +16,31 @@ export default function Login() {
   const navigation = useNavigation();
   const router = useRouter();
 
-  // declarar variaveis
   const [login, setLogin] = useState<string | null>(null);
   const [password, setPassword] = useState<string | null>(null);
-  
+
   function onClickButtonDisabled() {
-    Alert.alert( "botão desabilitadao ! \nInforme os dados para acesso !")
-    return
+    Alert.alert("botão desabilitadao ! \nInforme os dados para acesso !");
+    return;
   }
 
   function OnClickLogin() {
-    // validar se login e um email valido
-    
-    if( ! login ){
-        Alert.alert(" email invalido ...");
-        return
+    if (!login) {
+      Alert.alert(" email invalido ...");
+      return;
     }
-    // validar login e password
-    if ( login != "teste@teste.com" || password != "123"){
-        Alert.alert(" login ou senha invalido...");
-        return
+
+    if (login !== "teste@teste.com" || password !== "123") {
+      Alert.alert(" login ou senha invalido...");
+      return;
     }
-    // chama a tela de dashboard
-    router.navigate('/(tabs)')
+
+    router.push("/home");
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.header} >
-
         <Image
           height={50}
           width={100}
@@ -71,16 +67,17 @@ export default function Login() {
           />
         </View>
 
-        { (login || password) && (
+        {(login || password) && (
           <TouchableOpacity
             style={[styles.button]}
-            onPress={ () => (OnClickLogin()) }>
+            onPress={() => (OnClickLogin())}>
             <Text style={[styles.buttonText]} > Acessar </Text>
           </TouchableOpacity>
         )}
-        { !login && !password && (
+
+        {!login && !password && (
           <TouchableOpacity
-            onPress={ onClickButtonDisabled }
+            onPress={onClickButtonDisabled}
             style={[styles.disabledButton]}
           >
             <Text style={[styles.buttonText]} > Acessar </Text>
@@ -88,8 +85,8 @@ export default function Login() {
         )}
 
       </View>
-      <View style={styles.footer}>
 
+      <View style={styles.footer}>
         <Text>
           Não tenho conta.
         </Text>
@@ -120,7 +117,7 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding : 20,
+    padding: 20,
     marginTop: 50,
   },
 
@@ -196,6 +193,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold"
 
   },
+  
   disabledButton: {
     marginTop: 45,
     width: "100%",
@@ -203,7 +201,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: '#0E457D', // Visual indication of disabled state
+    backgroundColor: '#0E457D',
     opacity: 0.7,
   },
 
@@ -213,4 +211,3 @@ const styles = StyleSheet.create({
     color: "#0E457D"
   },
 });
-
