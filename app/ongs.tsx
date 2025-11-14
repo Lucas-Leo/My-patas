@@ -12,7 +12,6 @@ import {
   Easing,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -140,6 +139,7 @@ const OngCard = ({ ong, expanded, onPress }) => {
               <Ionicons name="heart-outline" size={24} color="#FF2BAA" />
             </TouchableOpacity>
           </View>
+ 
         ))}
       </Animated.View>
     </View>
@@ -171,24 +171,6 @@ export default function OngsScreen() {
         ))}
         <View style={{ height: 120 }} />
       </ScrollView>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
-          <Image source={require('@/assets/images/home.png')} style={styles.navIcon} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/ongs")}>
-          <Image source={require('@/assets/images/ongs.png')} style={styles.navIcon} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/favoritos")}>
-          <Image source={require('@/assets/images/coracao.png')} style={styles.navIcon} />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil")}>
-          <Image source={require('@/assets/images/perfil.png')} style={styles.navIcon} />
-        </TouchableOpacity>
-      </View>
 
     </SafeAreaView>
   );
@@ -317,28 +299,4 @@ const styles = StyleSheet.create({
     padding: 8,
   },
 
-  bottomNav: {
-    width: '100%',
-    height: 70,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 15,
-  },
-  navItem: {
-    padding: 10,
-  },
-  navIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
-    tintColor: '#0E457D',
-  },
 });
