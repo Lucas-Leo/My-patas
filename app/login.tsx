@@ -10,6 +10,8 @@ import {
 
 import { Link, useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
+import { Ionicons } from '@expo/vector-icons';
+
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 export default function Login() {
@@ -18,6 +20,7 @@ export default function Login() {
 
   const [login, setLogin] = useState<string | null>(null);
   const [password, setPassword] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   function onClickButtonDisabled() {
     Alert.alert("botão desabilitadao ! \nInforme os dados para acesso !");
@@ -61,10 +64,25 @@ export default function Login() {
         </View>
 
         <View style={styles.containerInput}>
-          <TextInput style={styles.input}
-            placeholder="Digite sua senha..."
-            onChangeText={(e) => setPassword(e)}
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.inputPassword}
+              placeholder="Digite sua senha..."
+              onChangeText={(e) => setPassword(e)}
+              secureTextEntry={!showPassword}
+            />
+
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              <Ionicons
+                name={showPassword ? "eye" : "eye-off"}
+                size={24}
+                color="#0E457D"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {(login || password) && (
@@ -128,7 +146,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     gap: 20,
-
   },
 
   footer: {
@@ -139,7 +156,6 @@ const styles = StyleSheet.create({
     padding: 20,
     flexDirection: "row",
     gap: 5,
-
   },
 
   logo: {
@@ -154,11 +170,6 @@ const styles = StyleSheet.create({
     borderColor: "gray",
     borderRadius: 15,
     paddingLeft: 10,
-  },
-
-  inputText: {
-    fontWeight: "bold",
-    fontSize: 22,
   },
 
   input: {
@@ -191,7 +202,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 20,
     fontWeight: "bold"
-
   },
   
   disabledButton: {
@@ -209,5 +219,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 36,
     color: "#0E457D"
+  },
+
+  passwordContainer: {
+    backgroundColor: '#F1F5F4',
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    height: 60,
+    borderRadius: 30,
+    paddingLeft: 20,
+    paddingRight: 20,
+  },
+
+  inputPassword: {
+    flex: 1,
+    fontSize: 16,
+  },
+
+  eyeButton: {
+    paddingHorizontal: 5,
   },
 });
