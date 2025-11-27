@@ -1,6 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, TouchableOpacity, ScrollView, Image } from 'react-native';
-// Certifique-se de que 'react-native-vector-icons' esteja instalado e configurado
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; 
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
@@ -13,10 +20,6 @@ const profileData = {
   phone: '1699000-0000',
 };
 
-// ** Importante **: Assumindo que 'router' está disponível no escopo (ex: se estiver usando Expo Router)
-// E que as imagens estão nos caminhos especificados. 
-// Para que este código funcione em um ambiente de teste local, substitua os caminhos das imagens
-// ou crie os placeholders necessários.
 
 // Função placeholder para simular o 'router.push' se não estiver usando um sistema de roteamento real
 const mockRouter = {
@@ -28,7 +31,7 @@ const router = mockRouter; // Usando o mock para evitar erros
 const NavItem = ({ iconName, label, onPress }) => (
   <TouchableOpacity style={styles.topNavItem} onPress={onPress}>
     {/* Usando Icon para a navegação interna da tela de perfil */}
-    <Icon name={iconName} size={24} color="#333" style={styles.navIcons} />
+    <Icon name={iconName} size={24} color="#333" style={styles.navIcon} />
     <Text style={styles.navText}>{label}</Text>
   </TouchableOpacity>
 );
@@ -103,43 +106,23 @@ const ProfileScreen = () => {
         </View>
       </ScrollView>
       
-      {/* ------------------------------------------------------------------- */}
-      {/* BARRA DE NAVEGAÇÃO INFERIOR ATUALIZADA (bottomNav) */}
-      {/* ------------------------------------------------------------------- */}
       <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push("/home")}>
-          {/* Substitua esta imagem pelo seu asset real */}
-          <Image 
-            source={require('@/assets/images/home.png')} 
-            style={[styles.bottomNavIcon, styles.iconActive]} // Icone ativo (home)
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push("/ongs")}>
-          {/* Substitua esta imagem pelo seu asset real */}
-          <Image 
-            source={require('@/assets/images/ongs.png')} 
-            style={styles.bottomNavIcon} 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push("/favoritos")}>
-          {/* Substitua esta imagem pelo seu asset real */}
-          <Image 
-            source={require('@/assets/images/coracao.png')} 
-            style={styles.bottomNavIcon} 
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.bottomNavItem} onPress={() => router.push("/perfil")}>
-          {/* Substitua esta imagem pelo seu asset real */}
-          <Image 
-            source={require('@/assets/images/perfil.png')} 
-            style={styles.bottomNavIcon} 
-          />
-        </TouchableOpacity>
-      </View>
-      {/* ------------------------------------------------------------------- */}
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
+                <Image source={require('@/assets/images/home.png')} style={styles.navIcon} />
+              </TouchableOpacity>
+      
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push("/ongs")}>
+                <Image source={require('@/assets/images/ongs.png')} style={styles.navIcon} />
+              </TouchableOpacity>
+      
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push("/favoritos")}>
+                <Image source={require('@/assets/images/coracao.png')} style={styles.navIcon} />
+              </TouchableOpacity>
+      
+              <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil")}>
+                <Image source={require('@/assets/images/perfil.png')} style={styles.navIcon} />
+              </TouchableOpacity>
+            </View>
     </SafeAreaView>
   );
 };
