@@ -72,11 +72,6 @@ const ProfileScreen = () => {
             <Icon name="help-circle-outline" size={24} color="#333" />
             <Text style={styles.extraText}>Perguntas</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.extraItem} onPress={() => router.push("/sobrenos")}>
-            <Icon name="account-group-outline" size={24} color="#333" />
-            <Text style={styles.extraText}>Sobre Nós</Text>
-          </TouchableOpacity>
         </View>
 
       </ScrollView>

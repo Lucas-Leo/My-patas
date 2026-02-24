@@ -22,7 +22,6 @@ export default function RootLayout() {
       
       <Stack>
         
-        
         <Stack.Screen name="login" options={{ headerShown: false }} />
         <Stack.Screen name="criarconta" options={{ headerShown: false }} />
         <Stack.Screen name="register" options={{ headerShown: false }} />
@@ -32,7 +31,6 @@ export default function RootLayout() {
         <Stack.Screen name="perfil" options={{ headerShown: false }} />
         <Stack.Screen name="favoritos" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> 
-        <Stack.Screen name="sobrenos" options={{ headerShown: false }} />
         <Stack.Screen name="quests" options={{ headerShown: false }} />
                   
         <Stack.Screen name="+not-found" />   
