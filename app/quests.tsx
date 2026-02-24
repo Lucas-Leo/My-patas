@@ -10,7 +10,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Ionicons, Fontisto } from '@expo/vector-icons';
-import { router } from "expo-router";
+import { useRouter } from "expo-router";
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 
@@ -42,11 +42,21 @@ const ListItem = ({ children }) => (
 );
 
 export default function QuestsScreen() {
+  const router = useRouter();
+
   return (
     <SafeAreaView style={styles.safeArea}>
 
-      <View style={styles.header}>
-        <Image source={logoApp} style={styles.logo} />
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back-outline" size={28} color="#0E457D" />
+        </TouchableOpacity>
+        <View style={styles.header}>
+          <Image source={logoApp} style={styles.logo} />
+        </View>
       </View>
 
       <ScrollView
@@ -110,10 +120,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  topBar: {
+    paddingTop: 30,
+  },
   header: {
     alignItems: 'center',
-    paddingVertical: 35,
-    marginTop: 20,
+    paddingVertical: 25,
+    marginTop: 10,
+  },
+  backButton: {
+    marginLeft: 30,
+    marginTop: 30,
   },
   logo: {
     width: 200,
