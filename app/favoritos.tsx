@@ -10,6 +10,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { AntDesign } from '@expo/vector-icons';
+import Entypo from '@expo/vector-icons/Entypo';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
@@ -78,24 +82,37 @@ export default function Favoritos() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
-          <Image source={require('@/assets/images/home.png')} style={styles.navIcon} />
+            <View style={styles.bottomNav}>
+
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/home")}
+        >
+          <Entypo name="home" size={30} color="#0E457D" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/ongs")}>
-          <Image source={require('@/assets/images/ongs.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/ongs")}
+        >
+          <MaterialIcons name="pets" size={30} color="#0E457D" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/favoritos")}>
-          <Image source={require('@/assets/images/coracao.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/favoritos")}
+        >
+          <AntDesign name="heart" size={30} color="#0E457D" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil")}>
-          <Image source={require('@/assets/images/perfil.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/perfil")}
+        >
+          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
         </TouchableOpacity>
+
       </View>
-
     </SafeAreaView>
   );
 }

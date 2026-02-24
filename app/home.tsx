@@ -10,6 +10,9 @@ import {
 } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
+import Entypo from '@expo/vector-icons/Entypo';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 const { width } = Dimensions.get('window');
@@ -51,7 +54,11 @@ const SwipeScreen = () => {
 
   const handleAction = (action) => {
     if (!currentPet) return;
-    if (action === 'like') setFavorites(prev => [...prev, currentPet]);
+
+    if (action === 'like') {
+      setFavorites(prev => [...prev, currentPet]);
+    }
+
     setPets(prevPets => prevPets.slice(1));
   };
 
@@ -62,7 +69,7 @@ const SwipeScreen = () => {
     <SafeAreaView style={styles.safeArea}>
 
       <View style={styles.header}>
-        <Image height={50} width={100} source={logoApp} style={styles.logo} />
+        <Image source={logoApp} style={styles.logo} />
       </View>
 
       <View style={styles.mainContent}>
@@ -71,11 +78,17 @@ const SwipeScreen = () => {
             <PetCard pet={currentPet} />
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={[styles.button, styles.skipButton]} onPress={handleSkip}>
+              <TouchableOpacity
+                style={[styles.button, styles.skipButton]}
+                onPress={handleSkip}
+              >
                 <AntDesign name="close" size={32} color="white" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.button, styles.likeButton]} onPress={handleLike}>
+              <TouchableOpacity
+                style={[styles.button, styles.likeButton]}
+                onPress={handleLike}
+              >
                 <AntDesign name="heart" size={32} color="white" />
               </TouchableOpacity>
             </View>
@@ -90,20 +103,32 @@ const SwipeScreen = () => {
 
       <View style={styles.bottomNav}>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/home")}>
-          <Image source={require('@/assets/images/home.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/home")}
+        >
+          <Entypo name="home" size={30} color="#0E457D" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/ongs")}>
-          <Image source={require('@/assets/images/ongs.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/ongs")}
+        >
+          <MaterialIcons name="pets" size={30} color="#0E457D" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/favoritos")}>
-          <Image source={require('@/assets/images/coracao.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/favoritos")}
+        >
+          <AntDesign name="heart" size={30} color="#0E457D" />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.navItem} onPress={() => router.push("/perfil")}>
-          <Image source={require('@/assets/images/perfil.png')} style={styles.navIcon} />
+        <TouchableOpacity
+          style={styles.navItem}
+          onPress={() => router.push("/perfil")}
+        >
+          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
         </TouchableOpacity>
 
       </View>
@@ -222,12 +247,6 @@ const styles = StyleSheet.create({
   },
   navItem: {
     padding: 10,
-  },
-  navIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
-    tintColor: '#0E457D',
   },
 });
 
