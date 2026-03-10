@@ -18,6 +18,7 @@ import { AntDesign } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { useThemeContext } from '@/context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -59,7 +60,7 @@ const ONGS = [
   {
     id: '4',
     nome: 'Amigos de quatro patas',
-    descricao: 'Não compre adote um animalzinho!',
+    descricao: 'Não compre. adote um animalzinho!',
     imagem: require('@/assets/images/ong4.png'),
     pets: [
       { id: 'p9', nome: 'Dalila', idade: '3 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/cachorro05.jpg') },
@@ -78,7 +79,7 @@ const ONGS = [
   },
 ];
 
-const OngCard = ({ ong, expanded, onPress, onPetPress }) => {
+const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }) => {
   const animation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -100,14 +101,40 @@ const OngCard = ({ ong, expanded, onPress, onPetPress }) => {
   });
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: isDark ? '#1F1F1F' : '#fff',
+          borderColor: isDark ? '#424242' : '#eee',
+        },
+      ]}
+    >
       <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.cardHeader}>
         <Image source={ong.imagem} style={styles.ongImage} resizeMode="cover" />
         <View style={styles.ongTextBox}>
-          <Text style={styles.ongName}>{ong.nome}</Text>
-          <Text style={styles.ongDesc}>{ong.descricao}</Text>
+          <Text
+            style={[
+              styles.ongName,
+              { color: isDark ? '#BBDEFB' : '#0E457D' },
+            ]}
+          >
+            {ong.nome}
+          </Text>
+          <Text
+            style={[
+              styles.ongDesc,
+              { color: isDark ? '#E0E0E0' : '#555' },
+            ]}
+          >
+            {ong.descricao}
+          </Text>
         </View>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={24} color="#0E457D" />
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={24}
+          color={isDark ? '#90CAF9' : '#0E457D'}
+        />
       </TouchableOpacity>
 
       <Animated.View
@@ -116,18 +143,45 @@ const OngCard = ({ ong, expanded, onPress, onPetPress }) => {
           {
             maxHeight: animatedMaxHeight,
             opacity: animatedOpacity,
+            backgroundColor: isDark ? '#121212' : '#fff',
+            borderTopColor: isDark ? '#424242' : '#EEE',
           },
         ]}
       >
-        <Text style={styles.petTitle}>Animais disponíveis</Text>
+        <Text
+          style={[
+            styles.petTitle,
+            { color: isDark ? '#90CAF9' : '#0E457D' },
+          ]}
+        >
+          Animais disponíveis
+        </Text>
 
         {ong.pets.map((pet) => (
           <View key={pet.id} style={styles.petRow}>
             <TouchableOpacity style={styles.petInfo} onPress={() => onPetPress(pet)}>
-              <Ionicons name="paw-outline" size={22} color="#0E457D" />
+              <Ionicons
+                name="paw-outline"
+                size={22}
+                color={isDark ? '#90CAF9' : '#0E457D'}
+              />
               <View style={{ marginLeft: 10 }}>
-                <Text style={styles.petName}>{pet.nome}</Text>
-                <Text style={styles.petDetails}>Idade: {pet.idade} • Porte: {pet.porte}</Text>
+                <Text
+                  style={[
+                    styles.petName,
+                    { color: isDark ? '#FFFFFF' : '#333' },
+                  ]}
+                >
+                  {pet.nome}
+                </Text>
+                <Text
+                  style={[
+                    styles.petDetails,
+                    { color: isDark ? '#BDBDBD' : '#555' },
+                  ]}
+                >
+                  Idade: {pet.idade} • Porte: {pet.porte}
+                </Text>
                 <Text
                   style={[
                     styles.petVacinado,
@@ -140,7 +194,11 @@ const OngCard = ({ ong, expanded, onPress, onPetPress }) => {
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.heartButton}>
-              <Ionicons name="heart-outline" size={24} color="#FF2BAA" />
+              <Ionicons
+                name="heart-outline"
+                size={24}
+                color={isDark ? '#FF80AB' : '#FF2BAA'}
+              />
             </TouchableOpacity>
           </View>
         ))}
@@ -152,19 +210,33 @@ const OngCard = ({ ong, expanded, onPress, onPetPress }) => {
 export default function OngsScreen() {
   const [expandedId, setExpandedId] = useState(null);
   const [selectedPet, setSelectedPet] = useState(null);
+  const { theme } = useThemeContext();
+  const isDark = theme === 'dark';
 
   const toggleExpand = (id) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? '#121212' : '#ffffff' },
+      ]}
+    >
       <View style={styles.header}>
         <Image height={50} width={100} source={logoApp} style={styles.logo} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>ONGS</Text>
+        <Text
+          style={[
+            styles.title,
+            { color: isDark ? '#FF80AB' : '#FF2BAA' },
+          ]}
+        >
+          ONGS
+        </Text>
 
         {ONGS.map((ong) => (
           <OngCard
@@ -173,51 +245,85 @@ export default function OngsScreen() {
             expanded={expandedId === ong.id}
             onPress={() => toggleExpand(ong.id)}
             onPetPress={(pet) => setSelectedPet(pet)}
+            isDark={isDark}
           />
         ))}
 
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <View style={styles.bottomNav}>
+      <View
+        style={[
+          styles.bottomNav,
+          { backgroundColor: isDark ? '#181818' : 'white' },
+        ]}
+      >
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo name="home" size={30} color="#0E457D" />
+          <Entypo
+            name="home"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/ongs")}
         >
-          <MaterialIcons name="pets" size={30} color="#0E457D" />
+          <MaterialIcons
+            name="pets"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/favoritos")}
         >
-          <AntDesign name="heart" size={30} color="#0E457D" />
+          <AntDesign
+            name="heart"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/perfil")}
         >
-          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
+          <FontAwesome5
+            name="user-alt"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
       </View>
 
       <Modal visible={!!selectedPet} transparent animationType="fade">
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: isDark ? '#1E1E1E' : 'white' },
+            ]}
+          >
             {selectedPet && (
               <>
                 <Image source={selectedPet.foto} style={styles.petImage} />
-                <Text style={styles.modalPetName}>{selectedPet.nome}</Text>
+                <Text
+                  style={[
+                    styles.modalPetName,
+                    { color: isDark ? '#BBDEFB' : '#0E457D' },
+                  ]}
+                >
+                  {selectedPet.nome}
+                </Text>
                 <Pressable onPress={() => setSelectedPet(null)} style={styles.closeButton}>
                   <Text style={styles.closeText}>Fechar</Text>
                 </Pressable>

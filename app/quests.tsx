@@ -15,6 +15,7 @@ import { AntDesign } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { useThemeContext } from '@/context/ThemeContext';
 
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
@@ -39,25 +40,55 @@ const Lista02 = [
   "Cada gesto conta e faz a diferença na vida dos animais. Junte-se a nós no Patas Conscientes e ajude a promover a adoção consciente e o bem-estar animal. Sua ajuda é fundamental!"
 ];
 
-const ListItem = ({ children }) => (
+type ListItemProps = {
+  children: React.ReactNode;
+  isDark: boolean;
+};
+
+const ListItem = ({ children, isDark }: ListItemProps) => (
   <View style={styles.listItem}>
-    <Text style={styles.bullet}>•</Text>
-    <Text style={styles.listItemText}>{children}</Text>
+    <Text
+      style={[
+        styles.bullet,
+        { color: isDark ? '#FF80AB' : '#FF2BAA' },
+      ]}
+    >
+      •
+    </Text>
+    <Text
+      style={[
+        styles.listItemText,
+        { color: isDark ? '#E0E0E0' : '#1E1E1E' },
+      ]}
+    >
+      {children}
+    </Text>
   </View>
 );
 
 export default function QuestsScreen() {
   const router = useRouter();
+  const { theme } = useThemeContext();
+  const isDark = theme === 'dark';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: isDark ? '#121212' : '#fff' },
+      ]}
+    >
 
       <View style={styles.topBar}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back-outline" size={28} color="#0E457D" />
+          <Ionicons
+            name="arrow-back-outline"
+            size={28}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
         <View style={styles.header}>
           <Image source={logoApp} style={styles.logo} />
@@ -71,61 +102,110 @@ export default function QuestsScreen() {
       >
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Como posso adotar?</Text>
-          <Text style={styles.aboutText}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: isDark ? '#FF80AB' : '#FF2BAA' },
+            ]}
+          >
+            Como posso adotar?
+          </Text>
+          <Text
+            style={[
+              styles.aboutText,
+              { color: isDark ? '#E0E0E0' : '#1E1E1E' },
+            ]}
+          >
             Adotar um animal de estimação é um ato de amor que transforma vidas, tanto a sua quanto a do animal. No Patas Conscientes, incentivamos a adoção consciente, garantindo que cada animalzinho encontre um lar cheio de carinho e responsabilidade. Aqui estão os passos para adotar:
           </Text>
         </View>
 
         <View style={styles.ulContainer}>
           {Lista01.map((step, index) => (
-            <ListItem key={index}>{step}</ListItem>
+            <ListItem key={index} isDark={isDark}>
+              {step}
+            </ListItem>
           ))}
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Como você pode ajudar a causa animal?</Text>
-          <Text style={styles.aboutText}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              { color: isDark ? '#FF80AB' : '#FF2BAA' },
+            ]}
+          >
+            Como você pode ajudar a causa animal?
+          </Text>
+          <Text
+            style={[
+              styles.aboutText,
+              { color: isDark ? '#E0E0E0' : '#1E1E1E' },
+            ]}
+          >
             No Patas Conscientes, acreditamos que todos podem contribuir para o bem-estar dos animais de várias maneiras. Aqui estão algumas formas de você se envolver e fazer a diferença:
           </Text>
         </View>
 
         <View style={styles.ulContainer}>
           {Lista02.map((step, index) => (
-            <ListItem key={index}>{step}</ListItem>
+            <ListItem key={index} isDark={isDark}>
+              {step}
+            </ListItem>
           ))}
         </View>
 
       </ScrollView>
 
-    <View style={styles.bottomNav}>
+    <View
+        style={[
+          styles.bottomNav,
+          { backgroundColor: isDark ? '#181818' : 'white' },
+        ]}
+      >
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo name="home" size={30} color="#0E457D" />
+          <Entypo
+            name="home"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/ongs")}
         >
-          <MaterialIcons name="pets" size={30} color="#0E457D" />
+          <MaterialIcons
+            name="pets"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/favoritos")}
         >
-          <AntDesign name="heart" size={30} color="#0E457D" />
+          <AntDesign
+            name="heart"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/perfil")}
         >
-          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
+          <FontAwesome5
+            name="user-alt"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
       </View>

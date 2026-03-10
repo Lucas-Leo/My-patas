@@ -14,16 +14,29 @@ import { AntDesign } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { useThemeContext } from '@/context/ThemeContext';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 const ProfileScreen = () => {
   const router = useRouter();
+  const { theme, toggleTheme } = useThemeContext();
+  const isDark = theme === 'dark';
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: isDark ? '#121212' : '#F5F5F5' },
+      ]}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.container,
+          { backgroundColor: isDark ? '#1E1E1E' : '#ffffff' },
+        ]}
+      >
 
         <View style={styles.header}>
            <Image height={50} width={100} source={logoApp} style={styles.logo}  />
@@ -39,74 +52,169 @@ const ProfileScreen = () => {
         <View style={styles.section}>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Nome:</Text>
-            <Text style={styles.value}>Margarete da Rosa Silva</Text>
+            <Text style={[styles.label, { color: isDark ? '#E5E5E5' : '#444' }]}>
+              Nome:
+            </Text>
+            <Text
+              style={[
+                styles.value,
+                { color: isDark ? '#FFFFFF' : '#000000' },
+              ]}
+            >
+              Margarete da Rosa Silva
+            </Text>
             <TouchableOpacity style={styles.editIcon}>
-              <Icon name="square-edit-outline" size={20} color="#000" />
+              <Icon
+                name="square-edit-outline"
+                size={20}
+                color={isDark ? '#FFFFFF' : '#000000'}
+              />
             </TouchableOpacity>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.field}>
-            <Text style={styles.label}>E-mail:</Text>
-            <Text style={styles.value}>margareterosasilva@gmail.com</Text>
+            <Text style={[styles.label, { color: isDark ? '#E5E5E5' : '#444' }]}>
+              E-mail:
+            </Text>
+            <Text
+              style={[
+                styles.value,
+                { color: isDark ? '#FFFFFF' : '#000000' },
+              ]}
+            >
+              margareterosasilva@gmail.com
+            </Text>
             <TouchableOpacity style={styles.editIcon}>
-              <Icon name="square-edit-outline" size={20} color="#000" />
+              <Icon
+                name="square-edit-outline"
+                size={20}
+                color={isDark ? '#FFFFFF' : '#000000'}
+              />
             </TouchableOpacity>
           </View>
 
           <View style={styles.divider} />
 
           <View style={styles.field}>
-            <Text style={styles.label}>Senha:</Text>
-            <Text style={styles.value}>*********</Text>
+            <Text style={[styles.label, { color: isDark ? '#E5E5E5' : '#444' }]}>
+              Senha:
+            </Text>
+            <Text
+              style={[
+                styles.value,
+                { color: isDark ? '#FFFFFF' : '#000000' },
+              ]}
+            >
+              *********
+            </Text>
             <TouchableOpacity style={styles.editIcon}>
-              <Icon name="square-edit-outline" size={20} color="#000" />
+              <Icon
+                name="square-edit-outline"
+                size={20}
+                color={isDark ? '#FFFFFF' : '#000000'}
+              />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={styles.deleteButton}>
+          <TouchableOpacity
+            style={[
+              styles.deleteButton,
+              { backgroundColor: isDark ? '#E53935' : '#FF3B3B' },
+            ]}
+          >
             <Text style={styles.deleteButtonText}>Excluir conta</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.extraSection}>
           <TouchableOpacity style={styles.extraItem} onPress={() => router.push("/quests")}>
-            <Icon name="help-circle-outline" size={24} color="#333" />
-            <Text style={styles.extraText}>Perguntas</Text>
+            <Icon
+              name="help-circle-outline"
+              size={24}
+              color={isDark ? '#E5E5E5' : '#333'}
+            />
+            <Text
+              style={[
+                styles.extraText,
+                { color: isDark ? '#E5E5E5' : '#333' },
+              ]}
+            >
+              Perguntas
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.extraItem}
+            onPress={toggleTheme}
+          >
+            <Icon
+              name={isDark ? 'weather-sunny' : 'weather-night'}
+              size={24}
+              color={isDark ? '#FFD54F' : '#333'}
+            />
+            <Text
+              style={[
+                styles.extraText,
+                { color: isDark ? '#E5E5E5' : '#333' },
+              ]}
+            >
+              {isDark ? 'Modo claro' : 'Modo escuro'}
+            </Text>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
-            <View style={styles.bottomNav}>
+            <View
+        style={[
+          styles.bottomNav,
+          { backgroundColor: isDark ? '#181818' : '#fff' },
+        ]}
+      >
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo name="home" size={30} color="#0E457D" />
+          <Entypo
+            name="home"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/ongs")}
         >
-          <MaterialIcons name="pets" size={30} color="#0E457D" />
+          <MaterialIcons
+            name="pets"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/favoritos")}
         >
-          <AntDesign name="heart" size={30} color="#0E457D" />
+          <AntDesign
+            name="heart"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/perfil")}
         >
-          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
+          <FontAwesome5
+            name="user-alt"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
       </View>
@@ -231,6 +339,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     alignItems: "center",
+  },
+
+  navItem: {
+    padding: 10,
   },
 
   bottomIcon: {

@@ -13,6 +13,7 @@ import { useRouter } from "expo-router";
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { useThemeContext } from '@/context/ThemeContext';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 const { width } = Dimensions.get('window');
@@ -33,19 +34,52 @@ const initialPets = [
   { id: 12, name: 'Chicó', ong: 'Aumigos', image: require('@/assets/images/gato06.jpg') },
 ];
 
-const PetCard = ({ pet }) => (
-  <View style={styles.cardContainer}>
+const PetCard = ({ pet, isDark }) => (
+  <View
+    style={[
+      styles.cardContainer,
+      {
+        backgroundColor: isDark ? '#1F1F1F' : '#fff',
+        borderColor: isDark ? '#424242' : '#ddd',
+      },
+    ]}
+  >
     <Image source={pet.image} style={styles.petImage} resizeMode="cover" />
 
-    <View style={styles.infoBox}>
-      <Text style={styles.petName}>{pet.name}</Text>
-      <Text style={styles.petONG}>{pet.ong}</Text>
+    <View
+      style={[
+        styles.infoBox,
+        {
+          backgroundColor: isDark
+            ? 'rgba(18, 18, 18, 0.9)'
+            : 'rgba(255, 255, 255, 0.7)',
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.petName,
+          { color: isDark ? '#FFFFFF' : '#333' },
+        ]}
+      >
+        {pet.name}
+      </Text>
+      <Text
+        style={[
+          styles.petONG,
+          { color: isDark ? '#90CAF9' : '#0E457D' },
+        ]}
+      >
+        {pet.ong}
+      </Text>
     </View>
   </View>
 );
 
 const SwipeScreen = () => {
   const router = useRouter();
+  const { theme } = useThemeContext();
+  const isDark = theme === 'dark';
 
   const [pets, setPets] = useState(initialPets);
   const [favorites, setFavorites] = useState([]);
@@ -66,7 +100,12 @@ const SwipeScreen = () => {
   const handleSkip = () => handleAction('skip');
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView
+      style={[
+        styles.safeArea,
+        { backgroundColor: isDark ? '#121212' : '#f8f8f8' },
+      ]}
+    >
 
       <View style={styles.header}>
         <Image source={logoApp} style={styles.logo} />
@@ -75,7 +114,7 @@ const SwipeScreen = () => {
       <View style={styles.mainContent}>
         {currentPet ? (
           <>
-            <PetCard pet={currentPet} />
+            <PetCard pet={currentPet} isDark={isDark} />
 
             <View style={styles.actionButtons}>
               <TouchableOpacity
@@ -95,40 +134,70 @@ const SwipeScreen = () => {
           </>
         ) : (
           <View style={styles.noMorePets}>
-            <Text style={styles.noMoreText}>Fim da lista!</Text>
-            <Text>Volte mais tarde para ver novos pets.</Text>
+            <Text
+              style={[
+                styles.noMoreText,
+                { color: isDark ? '#FFFFFF' : '#000000' },
+              ]}
+            >
+              Fim da lista!
+            </Text>
+            <Text style={{ color: isDark ? '#E0E0E0' : '#000000' }}>
+              Volte mais tarde para ver novos pets.
+            </Text>
           </View>
         )}
       </View>
 
-      <View style={styles.bottomNav}>
+      <View
+        style={[
+          styles.bottomNav,
+          { backgroundColor: isDark ? '#181818' : 'white' },
+        ]}
+      >
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo name="home" size={30} color="#0E457D" />
+          <Entypo
+            name="home"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/ongs")}
         >
-          <MaterialIcons name="pets" size={30} color="#0E457D" />
+          <MaterialIcons
+            name="pets"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/favoritos")}
         >
-          <AntDesign name="heart" size={30} color="#0E457D" />
+          <AntDesign
+            name="heart"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/perfil")}
         >
-          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
+          <FontAwesome5
+            name="user-alt"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
       </View>

@@ -14,6 +14,7 @@ import { AntDesign } from '@expo/vector-icons';
 import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { useThemeContext } from '@/context/ThemeContext';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
@@ -45,35 +46,91 @@ export default function Favoritos() {
     },
   ];
 
+  const { theme } = useThemeContext();
+  const isDark = theme === 'dark';
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? '#121212' : '#ffffff' },
+      ]}
+    >
       
       <View style={styles.header}>
         <Image height={50} width={100} source={logoApp} style={styles.logo} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Meus Favoritos</Text>
+        <Text
+          style={[
+            styles.title,
+            { color: isDark ? '#FF80AB' : '#FF2BAA' },
+          ]}
+        >
+          Meus Favoritos
+        </Text>
 
         {favoritos.map((pet) => (
-          <View key={pet.id} style={styles.card}>
+          <View
+            key={pet.id}
+            style={[
+              styles.card,
+              {
+                backgroundColor: isDark ? '#1F1F1F' : '#fff',
+                borderColor: isDark ? '#424242' : '#eee',
+              },
+            ]}
+          >
 
             <Image source={pet.foto} style={styles.petImage} />
 
             <View style={styles.petInfoBox}>
               <View style={styles.row}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.petName}>{pet.nome}</Text>
-                  <Text style={styles.petAge}>{pet.idade}</Text>
-                  <Text style={styles.petOng}>{pet.ong}</Text>
+                  <Text
+                    style={[
+                      styles.petName,
+                      { color: isDark ? '#BBDEFB' : '#0E457D' },
+                    ]}
+                  >
+                    {pet.nome}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.petAge,
+                      { color: isDark ? '#E0E0E0' : '#444' },
+                    ]}
+                  >
+                    {pet.idade}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.petOng,
+                      { color: isDark ? '#B0BEC5' : '#777' },
+                    ]}
+                  >
+                    {pet.ong}
+                  </Text>
                 </View>
 
                 <TouchableOpacity style={styles.heartButton}>
-                  <Ionicons name="heart" size={26} color="#FF2BAA" />
+                  <Ionicons
+                    name="heart"
+                    size={26}
+                    color={isDark ? '#FF80AB' : '#FF2BAA'}
+                  />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.petDescription}>{pet.descricao}</Text>
+              <Text
+                style={[
+                  styles.petDescription,
+                  { color: isDark ? '#E0E0E0' : '#555' },
+                ]}
+              >
+                {pet.descricao}
+              </Text>
             </View>
 
           </View>
@@ -82,34 +139,55 @@ export default function Favoritos() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-            <View style={styles.bottomNav}>
+      <View
+        style={[
+          styles.bottomNav,
+          { backgroundColor: isDark ? '#181818' : 'white' },
+        ]}
+      >
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo name="home" size={30} color="#0E457D" />
+          <Entypo
+            name="home"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/ongs")}
         >
-          <MaterialIcons name="pets" size={30} color="#0E457D" />
+          <MaterialIcons
+            name="pets"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/favoritos")}
         >
-          <AntDesign name="heart" size={30} color="#0E457D" />
+          <AntDesign
+            name="heart"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/perfil")}
         >
-          <FontAwesome5 name="user-alt" size={30} color="#0E457D" />
+          <FontAwesome5
+            name="user-alt"
+            size={30}
+            color={isDark ? '#90CAF9' : '#0E457D'}
+          />
         </TouchableOpacity>
 
       </View>
