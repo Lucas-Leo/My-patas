@@ -22,22 +22,32 @@ export default function Login() {
   const [password, setPassword] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  function validateEmail(email: string) {
+    return /\S+@\S+\.\S+/.test(email);
+  }
+
   function onClickButtonDisabled() {
-    Alert.alert("botão desabilitadao ! \nInforme os dados para acesso !");
+    Alert.alert("Atenção", "Preencha os campos obrigatórios para acessar.");
     return;
   }
 
   function OnClickLogin() {
-    if (!login) {
-      Alert.alert(" email invalido ...");
+    if (!login || !password) {
+      Alert.alert("Campos obrigatórios", "Preencha todos os campos para continuar.");
+      return;
+    }
+
+    if (!validateEmail(login)) {
+      Alert.alert("Erro", "Digite um e-mail válido.");
       return;
     }
 
     if (login !== "teste@teste.com" || password !== "123") {
-      Alert.alert(" login ou senha invalido...");
+      Alert.alert("Erro no login", "E-mail ou senha incorretos.");
       return;
     }
 
+    Alert.alert("Sucesso", "Login realizado com sucesso!");
     router.push("/home");
   }
 
@@ -88,7 +98,7 @@ export default function Login() {
         {(login || password) && (
           <TouchableOpacity
             style={[styles.button]}
-            onPress={() => (OnClickLogin())}>
+            onPress={OnClickLogin}>
             <Text style={[styles.buttonText]} > Acessar </Text>
           </TouchableOpacity>
         )}
@@ -110,7 +120,10 @@ export default function Login() {
         </Text>
 
         <Link href="/criarconta">
-          <Text style={styles.link}>
+          <Text
+            style={styles.link}
+            onPress={() => Alert.alert("Sucesso", "Conta criada com sucesso!")}
+          >
             Criar conta agora.
           </Text>
         </Link>

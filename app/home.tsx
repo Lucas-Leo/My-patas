@@ -7,6 +7,8 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
+  Modal,
+  Alert,
 } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
@@ -19,22 +21,21 @@ const logoApp = require("@/assets/images/LogoPataAzul.png");
 const { width } = Dimensions.get('window');
 
 const initialPets = [
-  { id: 1, name: 'Luke', ong: 'ONG1 - Paz e Amor', image: require('@/assets/images/cachorro01.jpg') },
-  { id: 2, name: 'Princesa', ong: 'ONG Amigo Fiel', image: require('@/assets/images/cachorro02.jpg') },
-  { id: 3, name: 'Max', ong: 'Abrigo do Coração', image: require('@/assets/images/cachorro03.jpg') },
-  { id: 4, name: 'Theo', ong: 'Abrigo do Coração', image: require('@/assets/images/cachorro04.jpg') },
-  { id: 5, name: 'Dalila', ong: 'Amigos de quatro patas', image: require('@/assets/images/cachorro05.jpg') },
-  { id: 6, name: 'Billy', ong: 'Aumigos', image: require('@/assets/images/cachorro06.jpg') },
-
-  { id: 7, name: 'Mingau', ong: 'ONG1 - Paz e Amor', image: require('@/assets/images/gato01.jpg') },
-  { id: 8, name: 'Salem', ong: 'ONG Amigo Fiel', image: require('@/assets/images/gato02.jpg') },
-  { id: 9, name: 'Matheo', ong: 'Abrigo do Coração', image: require('@/assets/images/gato03.jpg') },
-  { id: 10, name: 'Garfield', ong: 'Abrigo do Coração', image: require('@/assets/images/gato04.jpg') },
-  { id: 11, name: 'Kity', ong: 'Amigos de quatro patas', image: require('@/assets/images/gato05.jpg') },
-  { id: 12, name: 'Chicó', ong: 'Aumigos', image: require('@/assets/images/gato06.jpg') },
+  { id: 1, name: 'Luke', ong: 'ONG1 - Paz e Amor', description: 'Cachorro dócil, ama brincar e é muito carinhoso.', image: require('@/assets/images/cachorro01.jpg') },
+  { id: 2, name: 'Princesa', ong: 'ONG Amigo Fiel', description: 'Muito tranquila e ótima companhia.', image: require('@/assets/images/cachorro02.jpg') },
+  { id: 3, name: 'Max', ong: 'Abrigo do Coração', description: 'Cheio de energia e adora correr.', image: require('@/assets/images/cachorro03.jpg') },
+  { id: 4, name: 'Theo', ong: 'Abrigo do Coração', description: 'Carinhoso e ótimo com crianças.', image: require('@/assets/images/cachorro04.jpg') },
+  { id: 5, name: 'Dalila', ong: 'Amigos de quatro patas', description: 'Muito calma e amorosa.', image: require('@/assets/images/cachorro05.jpg') },
+  { id: 6, name: 'Billy', ong: 'Aumigos', description: 'Brincalhão e amigável.', image: require('@/assets/images/cachorro06.jpg') },
+  { id: 7, name: 'Mingau', ong: 'ONG1 - Paz e Amor', description: 'Gato tranquilo e independente.', image: require('@/assets/images/gato01.jpg') },
+  { id: 8, name: 'Salem', ong: 'ONG Amigo Fiel', description: 'Curioso e esperto.', image: require('@/assets/images/gato02.jpg') },
+  { id: 9, name: 'Matheo', ong: 'Abrigo do Coração', description: 'Adora carinho e colo.', image: require('@/assets/images/gato03.jpg') },
+  { id: 10, name: 'Garfield', ong: 'Abrigo do Coração', description: 'Preguiçoso e muito fofo.', image: require('@/assets/images/gato04.jpg') },
+  { id: 11, name: 'Kity', ong: 'Amigos de quatro patas', description: 'Delicada e carinhosa.', image: require('@/assets/images/gato05.jpg') },
+  { id: 12, name: 'Chicó', ong: 'Aumigos', description: 'Brincalhão e curioso.', image: require('@/assets/images/gato06.jpg') },
 ];
 
-const PetCard = ({ pet, isDark }) => (
+const PetCard = ({ pet, isDark, onPressName }) => (
   <View
     style={[
       styles.cardContainer,
@@ -56,14 +57,16 @@ const PetCard = ({ pet, isDark }) => (
         },
       ]}
     >
-      <Text
-        style={[
-          styles.petName,
-          { color: isDark ? '#FFFFFF' : '#333' },
-        ]}
-      >
-        {pet.name}
-      </Text>
+      <TouchableOpacity onPress={onPressName}>
+        <Text
+          style={[
+            styles.petName,
+            { color: isDark ? '#FFFFFF' : '#333' },
+          ]}
+        >
+          {pet.name}
+        </Text>
+      </TouchableOpacity>
       <Text
         style={[
           styles.petONG,
@@ -83,6 +86,7 @@ const SwipeScreen = () => {
 
   const [pets, setPets] = useState(initialPets);
   const [favorites, setFavorites] = useState([]);
+  const [selectedPet, setSelectedPet] = useState(null);
 
   const currentPet = pets[0];
 
@@ -91,9 +95,17 @@ const SwipeScreen = () => {
 
     if (action === 'like') {
       setFavorites(prev => [...prev, currentPet]);
+      Alert.alert("Sucesso", "Pet curtido com sucesso!");
     }
 
-    setPets(prevPets => prevPets.slice(1));
+    const updatedPets = pets.slice(1);
+    setPets(updatedPets);
+
+    if (updatedPets.length === 0) {
+      setTimeout(() => {
+        router.push("/ongs");
+      }, 500);
+    }
   };
 
   const handleLike = () => handleAction('like');
@@ -106,7 +118,6 @@ const SwipeScreen = () => {
         { backgroundColor: isDark ? '#121212' : '#f8f8f8' },
       ]}
     >
-
       <View style={styles.header}>
         <Image source={logoApp} style={styles.logo} />
       </View>
@@ -114,7 +125,11 @@ const SwipeScreen = () => {
       <View style={styles.mainContent}>
         {currentPet ? (
           <>
-            <PetCard pet={currentPet} isDark={isDark} />
+            <PetCard
+              pet={currentPet}
+              isDark={isDark}
+              onPressName={() => setSelectedPet(currentPet)}
+            />
 
             <View style={styles.actionButtons}>
               <TouchableOpacity
@@ -142,12 +157,26 @@ const SwipeScreen = () => {
             >
               Fim da lista!
             </Text>
-            <Text style={{ color: isDark ? '#E0E0E0' : '#000000' }}>
-              Volte mais tarde para ver novos pets.
-            </Text>
           </View>
         )}
       </View>
+
+      <Modal visible={!!selectedPet} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>{selectedPet?.name}</Text>
+            <Text style={styles.modalText}>{selectedPet?.ong}</Text>
+            <Text style={styles.modalText}>{selectedPet?.description}</Text>
+
+            <TouchableOpacity
+              style={styles.closeModal}
+              onPress={() => setSelectedPet(null)}
+            >
+              <Text style={{ color: '#fff' }}>Fechar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View
         style={[
@@ -155,7 +184,6 @@ const SwipeScreen = () => {
           { backgroundColor: isDark ? '#181818' : 'white' },
         ]}
       >
-
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
@@ -199,18 +227,13 @@ const SwipeScreen = () => {
             color={isDark ? '#90CAF9' : '#0E457D'}
           />
         </TouchableOpacity>
-
       </View>
-
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#f8f8f8',
-  },
+  safeArea: { flex: 1 },
   header: {
     flex: 0.25,
     width: '100%',
@@ -218,57 +241,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
   },
-  logo: {
-    width: 200,
-    height: 90,
-  },
-  mainContent: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  logo: { width: 200, height: 90 },
+  mainContent: { flex: 1, alignItems: 'center' },
   cardContainer: {
     width: width * 0.9,
     aspectRatio: 1 / 1.3,
     borderRadius: 15,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 5,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#ddd',
   },
-  petImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
-  infoBox: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    padding: 15,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-  },
-  petName: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  petONG: {
-    fontSize: 16,
-    color: '#0E457D',
-    fontWeight: '600',
-  },
+  petImage: { width: '100%', height: '100%', position: 'absolute' },
+  infoBox: { position: 'absolute', bottom: 0, width: '100%', padding: 15 },
+  petName: { fontSize: 28, fontWeight: 'bold' },
+  petONG: { fontSize: 16, fontWeight: '600' },
   actionButtons: {
     flexDirection: 'row',
     position: 'absolute',
     bottom: 30,
     width: width * 0.6,
     justifyContent: 'space-around',
-    zIndex: 10,
   },
   button: {
     width: 70,
@@ -276,46 +267,40 @@ const styles = StyleSheet.create({
     borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0E457D',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
     marginBottom: 30,
   },
-  skipButton: {
-    backgroundColor: '#0E457D',
-  },
-  likeButton: {
-    backgroundColor: '#FF2BAA',
-  },
-  noMorePets: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noMoreText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
+  skipButton: { backgroundColor: '#0E457D' },
+  likeButton: { backgroundColor: '#FF2BAA' },
+  noMorePets: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  noMoreText: { fontSize: 22, fontWeight: 'bold' },
   bottomNav: {
     width: '100%',
     height: 70,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 15,
   },
-  navItem: {
+  navItem: { padding: 10 },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: { fontSize: 24, fontWeight: 'bold', marginBottom: 10 },
+  modalText: { fontSize: 16, marginBottom: 10, textAlign: 'center' },
+  closeModal: {
+    marginTop: 10,
+    backgroundColor: '#0E457D',
     padding: 10,
+    borderRadius: 10,
   },
 });
 

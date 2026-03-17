@@ -8,7 +8,7 @@ TouchableOpacity,
 View
 } from "react-native";
 
-import { Link } from "expo-router";
+import { Link, router } from "expo-router";
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react-native";
 
@@ -16,14 +16,16 @@ const logoApp = require("@/assets/images/LogoPataAzul.png");
 
 export default function RegisterONG(){
 
-const [nome,setNome] = useState(null);
-const [nomeresponsavel,setNomeResponsavel] = useState(null);
-const [login,setLogin] = useState(null);
-const [cnpj,setCNPJ] = useState(null);
-const [password,setPassword] = useState(null);
-const [password2,setPassword2] = useState(null);
+const [nome,setNome] = useState("");
+const [nomeresponsavel,setNomeResponsavel] = useState("");
+const [login,setLogin] = useState("");
+const [cnpj,setCNPJ] = useState("");
+const [password,setPassword] = useState("");
+const [password2,setPassword2] = useState("");
 const [viewPassword,setViewPassord] = useState(true);
-const [celular,setCelular] = useState(null);
+const [celular,setCelular] = useState("");
+
+const [usuarioComumCriado,setUsuarioComumCriado] = useState(false);
 
 function mascaraCNPJ(value){
 value = value.replace(/\D/g,"")
@@ -60,25 +62,37 @@ function onClickRegistrarONG(){
 
 try{
 
-Alert.alert("Aviso","Antes de criar uma conta de ONG você precisa ter criado uma conta de usuário comum.")
+let camposFaltando = []
 
-if(!nome || !nomeresponsavel || !login || !cnpj || !celular || !password || !password2){
-Alert.alert("Alerta","Preencha todos os campos obrigatórios.")
+if(!nome) camposFaltando.push("Nome da ONG")
+if(!nomeresponsavel) camposFaltando.push("Nome do responsável")
+if(!login) camposFaltando.push("E-mail")
+if(!cnpj) camposFaltando.push("CNPJ")
+if(!celular) camposFaltando.push("Telefone")
+if(!password) camposFaltando.push("Senha")
+if(!password2) camposFaltando.push("Confirmação de senha")
+
+if(camposFaltando.length > 0){
+Alert.alert(
+"Erro",
+"Preencha os campos obrigatórios:\n\n" +
+camposFaltando.map(campo => `${campo}: Campo obrigatório`).join("\n")
+)
 return
 }
 
 if(!validarEmail(login)){
-Alert.alert("Alerta","Digite um e-mail válido.")
+Alert.alert("Erro","E-mail inválido.")
 return
 }
 
 if(!validarCNPJ(cnpj)){
-Alert.alert("Alerta","CNPJ inválido.")
+Alert.alert("Erro","CNPJ inválido.")
 return
 }
 
 if(!validarTelefone(celular)){
-Alert.alert("Alerta","Telefone inválido.")
+Alert.alert("Erro","Telefone inválido.")
 return
 }
 
@@ -87,12 +101,30 @@ Alert.alert("Erro","As senhas não coincidem.")
 return
 }
 
-console.log("Tentativa de cadastro ONG")
-console.log(nome)
-console.log(nomeresponsavel)
-console.log(login)
-console.log(cnpj)
-console.log(celular)
+if(!usuarioComumCriado){
+Alert.alert(
+"Aviso",
+"Para criar uma conta de ONG, é necessário ter uma conta de usuário comum.",
+[
+{
+text: "Cancelar",
+style: "cancel"
+},
+{
+text: "Criar conta de usuário",
+onPress: () => router.push("/register")
+}
+]
+)
+return
+}
+
+Alert.alert(
+"Sucesso",
+"Conta de ONG criada com sucesso!"
+)
+
+console.log("Cadastro ONG realizado com sucesso")
 
 }catch(error){
 
@@ -118,16 +150,16 @@ return(
 style={styles.input}
 placeholder="Nome da ONG"
 onChangeText={(value)=>setNome(value)}
-value={nome || ""}
+value={nome}
 />
 </View>
 
 <View style={styles.containerInput}>
 <TextInput
 style={styles.input}
-placeholder="Nome do Responsavel"
+placeholder="Nome do Responsável"
 onChangeText={(value)=>setNomeResponsavel(value)}
-value={nomeresponsavel || ""}
+value={nomeresponsavel}
 />
 </View>
 
@@ -136,7 +168,7 @@ value={nomeresponsavel || ""}
 style={styles.input}
 placeholder="E-mail"
 onChangeText={(value)=>setLogin(value)}
-value={login || ""}
+value={login}
 />
 </View>
 
@@ -145,7 +177,7 @@ value={login || ""}
 style={styles.input}
 placeholder="CNPJ"
 onChangeText={(value)=>setCNPJ(mascaraCNPJ(value))}
-value={cnpj || ""}
+value={cnpj}
 keyboardType="numeric"
 maxLength={18}
 />
@@ -156,7 +188,7 @@ maxLength={18}
 style={styles.input}
 placeholder="Telefone"
 onChangeText={(value)=>setCelular(mascaraTelefone(value))}
-value={celular || ""}
+value={celular}
 keyboardType="numeric"
 maxLength={15}
 />
@@ -170,7 +202,7 @@ maxLength={15}
 style={styles.input}
 placeholder="Senha"
 onChangeText={(value)=>setPassword(value)}
-value={password || ""}
+value={password}
 secureTextEntry={viewPassword}
 maxLength={8}
 />
@@ -196,7 +228,7 @@ style={styles.iconPassword}
 style={styles.input}
 placeholder="Confirme sua senha"
 onChangeText={(value)=>setPassword2(value)}
-value={password2 || ""}
+value={password2}
 secureTextEntry={true}
 maxLength={8}
 />

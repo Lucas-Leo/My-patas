@@ -21,22 +21,53 @@ export default function Register() {
   const [password, setPassword] = useState<string>(null);
   const [password2, setPassword2] = useState<string>(null);
   const [viewPassword, setViewPassord] = useState<boolean>(false);
-  const [ celular, setCelular] = useState<number>(null);
+  const [celular, setCelular] = useState<string>("");
+
+  const navigation = useNavigation();
+
+  function formatarTelefone(valor: string) {
+    let numeros = valor.replace(/\D/g, "");
+
+    if (numeros.length > 11) numeros = numeros.slice(0, 11);
+
+    if (numeros.length <= 2) return `(${numeros}`;
+    if (numeros.length <= 7)
+      return `(${numeros.slice(0, 2)}) ${numeros.slice(2)}`;
+    return `(${numeros.slice(0, 2)}) ${numeros.slice(2, 7)}-${numeros.slice(7)}`;
+  }
+
+  function validarEmail(email: string) {
+    return /\S+@\S+\.\S+/.test(email);
+  }
 
   function onClickRegistrar() {
-    console.log("clicou para fazer registro");
-    console.log(nome);
-    console.log(login);
-    console.log(password);
-    console.log(password2);
-    console.log( celular );
+    if (!nome || !login || !password || !password2 || !celular) {
+      Alert.alert("Alerta:", "Preencha todos os campos obrigatórios");
+      return;
+    }
 
-    if ( password != password2 )
-      Alert.alert(" senhas não coincidem ...")
+    if (!validarEmail(login)) {
+      Alert.alert("Erro", "Digite um e-mail válido");
+      return;
+    }
 
+    if (password !== password2) {
+      Alert.alert("Erro", "As senhas não coincidem");
+      return;
+    }
+
+    if (password.length < 4) {
+      Alert.alert("Erro", "A senha deve ter pelo menos 4 caracteres");
+      return;
+    }
+
+    try {
+      Alert.alert("Sucesso", "Conta criada com sucesso");
+      navigation.navigate("login" as never);
+    } catch (error) {
+      Alert.alert("Erro", "Ocorreu um problema ao criar a conta");
+    }
   }
-  
-  const navigation = useNavigation();
 
   return (
     <View style={styles.container}>
@@ -73,10 +104,9 @@ export default function Register() {
         <View style={styles.containerInput}>
           <TextInput style={styles.input}
             placeholder="Telefone"
-            onChangeText={(value) => { setCelular(value) }}
-            value={celular || ""}
-            maxLength={14}
-            inputMode="tel"
+            onChangeText={(value) => { setCelular(formatarTelefone(value)) }}
+            value={celular}
+            keyboardType="phone-pad"
           />
         </View>
 
@@ -96,23 +126,21 @@ export default function Register() {
               onPress={() => { setViewPassord(!viewPassword) }}
               style={[styles.iconPassword]}
             >
-              { ( ! viewPassword ) ? (<EyeOff size={30} color={"red"} />) :
-              ( <Eye size={30} color={"blue"} />) }
-              
-
+              {(!viewPassword) ? (<EyeOff size={30} color={"red"} />) :
+                (<Eye size={30} color={"blue"} />)}
             </TouchableOpacity>
           </View>
         </View>
+
         <View style={styles.containerInput}>
           <TextInput style={styles.input}
             placeholder="Confirme sua senha"
             onChangeText={(valor) => { setPassword2(valor) }}
-            value={password2}
+            value={password2 || ""}
             secureTextEntry={true}
             maxLength={8}
           />
         </View>
-
 
         <TouchableOpacity
           style={[styles.button]}
@@ -123,6 +151,7 @@ export default function Register() {
         </TouchableOpacity>
 
       </View>
+
       <View style={styles.footer}>
 
         <Text>
@@ -156,7 +185,6 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-
   },
 
   main: {
@@ -166,7 +194,6 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 20,
     gap: 20,
-
   },
 
   footer: {
@@ -177,11 +204,10 @@ export const styles = StyleSheet.create({
     padding: 20,
     flexDirection: "row",
     gap: 5,
-
   },
 
   logo: {
-   width: 200,
+    width: 200,
     height: 90,
   },
 
@@ -231,15 +257,15 @@ export const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 20,
     fontWeight: "bold"
-  }
-  ,
+  },
+
   containerSenha: {
     flexDirection: "row",
     gap: 3,
-  }
-  , 
-  iconPassword :{
-    alignItems : "center",
+  },
+
+  iconPassword: {
+    alignItems: "center",
     justifyContent: "center"
   }
 });
