@@ -8,10 +8,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { AntDesign } from '@expo/vector-icons';
-import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -150,7 +149,7 @@ export default function Favoritos() {
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo
+          <MaterialCommunityIcons
             name="home"
             size={30}
             color={isDark ? '#90CAF9' : '#0E457D'}

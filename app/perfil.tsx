@@ -11,7 +11,6 @@ import {
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRouter } from "expo-router";
 import { AntDesign } from '@expo/vector-icons';
-import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -177,7 +176,7 @@ const ProfileScreen = () => {
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo
+          <MaterialIcons
             name="home"
             size={30}
             color={isDark ? '#90CAF9' : '#0E457D'}

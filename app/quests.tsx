@@ -9,10 +9,9 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import { Ionicons, Fontisto } from '@expo/vector-icons';
+import { Ionicons, Fontisto, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { AntDesign } from '@expo/vector-icons';
-import Entypo from '@expo/vector-icons/Entypo';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -168,7 +167,7 @@ export default function QuestsScreen() {
           style={styles.navItem}
           onPress={() => router.push("/home")}
         >
-          <Entypo
+          <MaterialCommunityIcons
             name="home"
             size={30}
             color={isDark ? '#90CAF9' : '#0E457D'}
