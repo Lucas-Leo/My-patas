@@ -114,21 +114,19 @@ export default function Login() {
 
       </View>
 
-      <View style={styles.footer}>
-        <Text>
-          Não tenho conta.
-        </Text>
-
-        <Link href="/criarconta">
-          <Text
-            style={styles.link}
-            onPress={() => Alert.alert("Sucesso", "Conta criada com sucesso!")}
-          >
-            Criar conta agora.
+        <View style={styles.footer}>
+          <Text>
+            Não tenho conta.
           </Text>
-        </Link>
 
-      </View>
+          <Link href="/criarconta" asChild>
+            <TouchableOpacity>
+              <Text style={styles.link}>
+                Criar conta agora.
+              </Text>
+            </TouchableOpacity>
+          </Link>
+        </View>
     </View>
   );
 }
