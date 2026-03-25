@@ -7,9 +7,9 @@ import {
   StyleSheet,
   SafeAreaView,
   Dimensions,
-  Modal,
   Animated,
   PanResponder,
+  ScrollView,
 } from 'react-native';
 import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
@@ -18,7 +18,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 const initialPets = [
   { id: 1, name: 'Luke', ong: 'ONG1 - Paz e Amor', description: 'Cachorro dócil, ama brincar e é muito carinhoso.', image: require('@/assets/images/cachorro01.jpg') },
@@ -45,6 +45,9 @@ export default function SwipeScreen() {
 
   const position = useRef(new Animated.ValueXY()).current;
   const likeAnim = useRef(new Animated.Value(0)).current;
+
+  const sheetY = useRef(new Animated.Value(height)).current;
+  const overlayOpacity = useRef(new Animated.Value(0)).current;
 
   const currentPet = pets[0];
 
@@ -107,6 +110,56 @@ export default function SwipeScreen() {
     }).start();
   };
 
+  const openSheet = (pet) => {
+    setSelectedPet(pet);
+    Animated.parallel([
+      Animated.timing(sheetY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeSheet = () => {
+    Animated.parallel([
+      Animated.timing(sheetY, {
+        toValue: height,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setSelectedPet(null));
+  };
+
+  const sheetPan = PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
+    onPanResponderMove: (_, g) => {
+      if (g.dy > 0) {
+        sheetY.setValue(g.dy);
+      }
+    },
+    onPanResponderRelease: (_, g) => {
+      if (g.dy > 120) {
+        closeSheet();
+      } else {
+        Animated.spring(sheetY, {
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      }
+    },
+  });
+
   const panResponder = PanResponder.create({
     onMoveShouldSetPanResponder: () => true,
     onPanResponderMove: (_, gesture) => {
@@ -163,21 +216,23 @@ export default function SwipeScreen() {
                 ],
               }}
             >
-              <View style={[styles.cardContainer, { backgroundColor: isDark ? '#1F1F1F' : '#fff' }]}>
-                <Image source={currentPet.image} style={styles.petImage} />
+              <TouchableOpacity activeOpacity={0.9} onPress={() => openSheet(currentPet)}>
+                <View style={[styles.cardContainer, { backgroundColor: isDark ? '#1F1F1F' : '#fff' }]}>
+                  <Image source={currentPet.image} style={styles.petImage} />
 
-                <View style={styles.infoBox}>
-                  <TouchableOpacity onPress={() => setSelectedPet(currentPet)}>
-                    <Text style={[styles.petName, { color: '#fff' }]}>
-                      {currentPet.name}
+                  <View style={styles.infoBox}>
+                    <TouchableOpacity onPress={() => openSheet(currentPet)}>
+                      <Text style={[styles.petName, { color: '#fff' }]}>
+                        {currentPet.name}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <Text style={{ color: '#90CAF9' }}>
+                      {currentPet.ong}
                     </Text>
-                  </TouchableOpacity>
-
-                  <Text style={{ color: '#90CAF9' }}>
-                    {currentPet.ong}
-                  </Text>
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             </Animated.View>
 
             <View style={styles.actionButtons}>
@@ -197,19 +252,45 @@ export default function SwipeScreen() {
         )}
       </View>
 
-      <Modal visible={!!selectedPet} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>{selectedPet?.name}</Text>
-            <Text>{selectedPet?.ong}</Text>
-            <Text>{selectedPet?.description}</Text>
+      {selectedPet && (
+        <>
+          <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+            <TouchableOpacity style={{ flex: 1 }} onPress={closeSheet} />
+          </Animated.View>
 
-            <TouchableOpacity onPress={() => setSelectedPet(null)} style={styles.closeModal}>
-              <Text style={{ color: '#fff' }}>Fechar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+          <Animated.View
+            style={[
+              styles.bottomSheet,
+              {
+                transform: [{ translateY: sheetY }],
+              },
+            ]}
+            {...sheetPan.panHandlers}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <Image source={selectedPet.image} style={styles.sheetImage} />
+
+              <View style={styles.sheetContent}>
+                <Text style={styles.sheetTitle}>{selectedPet.name}</Text>
+
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>ONG</Text>
+                  <Text>{selectedPet.ong}</Text>
+                </View>
+
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Sobre</Text>
+                  <Text>{selectedPet.description}</Text>
+                </View>
+
+                <TouchableOpacity style={styles.actionPrimary}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Adotar</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </Animated.View>
+        </>
+      )}
 
       <View style={[styles.bottomNav, { backgroundColor: isDark ? '#181818' : '#fff' }]}>
         <TouchableOpacity onPress={() => router.push("/home")}>
@@ -233,86 +314,128 @@ export default function SwipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1 },
-  header: { alignItems: 'center', padding: 20 },
-  logo: { width: 200, height: 90 },
-  mainContent: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-
-  cardContainer: {
-    width: width * 0.9,
-    height: width * 1.2,
-    borderRadius: 15,
-    overflow: 'hidden',
+  safeArea: { 
+    flex: 1, 
+    marginTop: 45 
   },
 
-  petImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+  header: { 
+    alignItems: 'center', 
+    paddingVertical: 30, 
+    marginTop: 20 
   },
 
-  infoBox: {
+  logo: { 
+    width: 200, 
+    height: 90 
+  },
+
+  mainContent: { 
+    flex: 1, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+
+  cardContainer: { 
+    width: width * 0.9, 
+    height: width * 1.2, 
+    borderRadius: 15, 
+    overflow: 'hidden' 
+  },
+
+  petImage: { 
+    width: '100%', 
+    height: '100%', 
+    position: 'absolute'
+   },
+
+  infoBox: { 
     position: 'absolute',
+    bottom: 0, 
+    padding: 15, 
+    width: '100%', 
+    backgroundColor: 'rgba(0,0,0,0.4)'
+   },
+
+  petName: { 
+    fontSize: 26, 
+    fontWeight: 'bold' 
+  },
+
+  actionButtons: { 
+    flexDirection: 'row',
+     marginTop: 20, 
+     width: width * 0.6, 
+     justifyContent: 'space-around' 
+    },
+
+  button: { 
+    width: 70, 
+    height: 70, 
+    borderRadius: 35, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+
+  skipButton: { 
+    backgroundColor: '#0E457D'
+   },
+
+  likeButton: { 
+    backgroundColor: '#FF2BAA' 
+  },
+
+  bottomNav: { 
+    height: 70, 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    alignItems: 'center'
+   },
+
+  overlay: { 
+    ...StyleSheet.absoluteFillObject, 
+    backgroundColor: 'rgba(0,0,0,0.5)'
+   },
+
+  bottomSheet: { 
+    position: 'absolute', 
     bottom: 0,
-    padding: 15,
-    width: '100%',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+     width: '100%', 
+     height: height * 0.85, 
+     backgroundColor: '#fff',
+      borderTopLeftRadius: 20, 
+      borderTopRightRadius: 20 
+    },
+
+  sheetImage: { 
+    width: '100%', 
+    height: 250 
   },
 
-  petName: {
-    fontSize: 26,
-    fontWeight: 'bold',
+  sheetContent: { 
+    padding: 20 
   },
 
-  actionButtons: {
-    flexDirection: 'row',
-    marginTop: 20,
-    width: width * 0.6,
-    justifyContent: 'space-around',
+  sheetTitle: { 
+    fontSize: 24, 
+    fontWeight: 'bold', 
+    marginBottom: 10 
   },
 
-  button: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    justifyContent: 'center',
-    alignItems: 'center',
+  section: { 
+    marginBottom: 15
+   },
+
+  sectionTitle: { 
+    fontWeight: 'bold', 
+    marginBottom: 5 
   },
 
-  skipButton: { backgroundColor: '#0E457D' },
-  likeButton: { backgroundColor: '#FF2BAA' },
-
-  bottomNav: {
-    height: 70,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-
-  modalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  modalContent: {
-    width: '80%',
-    backgroundColor: '#fff',
-    padding: 20,
-    borderRadius: 15,
-    alignItems: 'center',
-  },
-
-  modalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-  },
-
-  closeModal: {
-    marginTop: 10,
-    backgroundColor: '#0E457D',
-    padding: 10,
-    borderRadius: 10,
-  },
+  actionPrimary: { 
+    marginTop: 20, 
+    backgroundColor: '#FF2BAA', 
+    padding: 15, 
+    borderRadius: 15, 
+    alignItems: 'center'
+   },
 });
