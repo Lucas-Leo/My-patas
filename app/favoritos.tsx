@@ -55,7 +55,6 @@ export default function Favoritos() {
         { backgroundColor: isDark ? '#121212' : '#ffffff' },
       ]}
     >
-      
       <View style={styles.header}>
         <Image height={50} width={100} source={logoApp} style={styles.logo} />
       </View>
@@ -81,7 +80,6 @@ export default function Favoritos() {
               },
             ]}
           >
-
             <Image source={pet.foto} style={styles.petImage} />
 
             <View style={styles.petInfoBox}>
@@ -130,8 +128,16 @@ export default function Favoritos() {
               >
                 {pet.descricao}
               </Text>
-            </View>
 
+              <TouchableOpacity
+                style={[
+                  styles.adoptButton,
+                  { backgroundColor: isDark ? '#FF80AB' : '#FF2BAA' },
+                ]}
+              >
+                <Text style={styles.adoptText}>Adotar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ))}
 
@@ -144,7 +150,6 @@ export default function Favoritos() {
           { backgroundColor: isDark ? '#181818' : 'white' },
         ]}
       >
-
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => router.push("/home")}
@@ -188,7 +193,6 @@ export default function Favoritos() {
             color={isDark ? '#90CAF9' : '#0E457D'}
           />
         </TouchableOpacity>
-
       </View>
     </SafeAreaView>
   );
@@ -280,6 +284,19 @@ const styles = StyleSheet.create({
   heartButton: {
     padding: 4,
     marginRight: 5,
+  },
+
+  adoptButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+
+  adoptText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: 'bold',
   },
 
   bottomNav: {
