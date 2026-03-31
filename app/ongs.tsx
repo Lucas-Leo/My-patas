@@ -1,27 +1,44 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  SafeAreaView,
-  Dimensions,
-  Animated,
-  Modal,
-  Pressable
-} from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { AntDesign } from '@expo/vector-icons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
+import { AntDesign, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Dimensions,
+  Image,
+  Modal,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
+
+type Pet = {
+  id: string;
+  nome: string;
+  idade: string;
+  porte: string;
+  vacinado: boolean;
+  foto: any;
+};
+
+type Ong = {
+  id: string;
+  nome: string;
+  descricao: string;
+  imagem: any;
+  pets: Pet[];
+};
 
 const ONGS = [
   {
@@ -78,7 +95,15 @@ const ONGS = [
   },
 ];
 
-const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }) => {
+type OngCardProps = {
+  ong: Ong;
+  expanded: boolean;
+  onPress: () => void;
+  onPetPress: (pet: Pet) => void;
+  isDark: boolean;
+};
+
+const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }: OngCardProps) => {
   const animation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -159,11 +184,7 @@ const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }) => {
         {ong.pets.map((pet) => (
           <View key={pet.id} style={styles.petRow}>
             <TouchableOpacity style={styles.petInfo} onPress={() => onPetPress(pet)}>
-              <Ionicons
-                name="paw-outline"
-                size={22}
-                color={isDark ? '#90CAF9' : '#0E457D'}
-              />
+              <Image source={pet.foto} style={styles.petThumb} />
               <View style={{ marginLeft: 10 }}>
                 <Text
                   style={[
@@ -207,12 +228,18 @@ const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }) => {
 };
 
 export default function OngsScreen() {
-  const [expandedId, setExpandedId] = useState(null);
-  const [selectedPet, setSelectedPet] = useState(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  const toggleExpand = (id) => {
+  const closePetModal = () => setSelectedPet(null);
+  const handleAdotar = () => {
+    Alert.alert('Adoção', 'Sua solicitação de adoção foi registrada!');
+    closePetModal();
+  };
+
+  const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
@@ -314,6 +341,21 @@ export default function OngsScreen() {
           >
             {selectedPet && (
               <>
+                <TouchableOpacity
+                  onPress={closePetModal}
+                  style={[
+                    styles.closeIconButton,
+                    { backgroundColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Fechar"
+                >
+                  <Ionicons
+                    name="close"
+                    size={22}
+                    color={isDark ? '#FFFFFF' : '#111111'}
+                  />
+                </TouchableOpacity>
                 <Image source={selectedPet.foto} style={styles.petImage} />
                 <Text
                   style={[
@@ -323,8 +365,8 @@ export default function OngsScreen() {
                 >
                   {selectedPet.nome}
                 </Text>
-                <Pressable onPress={() => setSelectedPet(null)} style={styles.closeButton}>
-                  <Text style={styles.closeText}>Fechar</Text>
+                <Pressable onPress={handleAdotar} style={styles.adoptButton}>
+                  <Text style={styles.adoptText}>Adotar</Text>
                 </Pressable>
               </>
             )}
@@ -422,6 +464,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
+  petThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 14,
+  },
   petName: {
     fontSize: 17,
     fontWeight: 'bold',
@@ -483,14 +530,26 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     color: '#0E457D',
   },
-  closeButton: {
+  closeIconButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  adoptButton: {
     backgroundColor: '#FF2BAA',
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 14,
   },
-  closeText: {
+  adoptText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '700',
   },
 });

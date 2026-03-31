@@ -7,8 +7,9 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Switch,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { AntDesign } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -144,12 +145,9 @@ const ProfileScreen = () => {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.extraItem}
-            onPress={toggleTheme}
-          >
+          <View style={styles.extraItem}>
             <Icon
-              name={isDark ? 'weather-sunny' : 'weather-night'}
+              name={isDark ? 'weather-night' : 'weather-sunny'}
               size={24}
               color={isDark ? '#FFD54F' : '#333'}
             />
@@ -159,9 +157,16 @@ const ProfileScreen = () => {
                 { color: isDark ? '#E5E5E5' : '#333' },
               ]}
             >
-              {isDark ? 'Modo claro' : 'Modo escuro'}
+              Modo escuro
             </Text>
-          </TouchableOpacity>
+            <View style={{ flex: 1 }} />
+            <Switch
+              value={isDark}
+              onValueChange={toggleTheme}
+              thumbColor="#FFFFFF"
+              trackColor={{ false: '#B0BEC5', true: '#4CAF50' }}
+            />
+          </View>
         </View>
 
       </ScrollView>
