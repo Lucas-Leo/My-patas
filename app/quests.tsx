@@ -9,12 +9,10 @@ import {
   Dimensions,
   ScrollView,
 } from 'react-native';
-import { Ionicons, Fontisto, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
-import { AntDesign } from '@expo/vector-icons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
+import BottomNav from '@/components/BottomNav';
 
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
@@ -156,58 +154,7 @@ export default function QuestsScreen() {
 
       </ScrollView>
 
-    <View
-        style={[
-          styles.bottomNav,
-          { backgroundColor: isDark ? '#181818' : 'white' },
-        ]}
-      >
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/home")}
-        >
-          <MaterialCommunityIcons
-            name="home"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/ongs")}
-        >
-          <MaterialIcons
-            name="pets"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/favoritos")}
-        >
-          <AntDesign
-            name="heart"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/perfil")}
-        >
-          <FontAwesome5
-            name="user-alt"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-      </View>
+      <BottomNav isDark={isDark} />
 
     </SafeAreaView>
   );
@@ -276,26 +223,4 @@ const styles = StyleSheet.create({
     color: '#1E1E1E',
   },
 
-  bottomNav: {
-    width: '100%',
-    height: 70,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    elevation: 15,
-    position: "absolute",
-    bottom: 0,
-  },
-  navItem: {
-    padding: 10,
-  },
-  navIcon: {
-    width: 40,
-    height: 40,
-    resizeMode: 'contain',
-    tintColor: '#0E457D',
-  },
 });

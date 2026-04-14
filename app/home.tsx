@@ -11,11 +11,10 @@ import {
   PanResponder,
   ScrollView,
 } from 'react-native';
-import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
+import BottomNav from '@/components/BottomNav';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 const { width, height } = Dimensions.get('window');
@@ -292,23 +291,7 @@ export default function SwipeScreen() {
         </>
       )}
 
-      <View style={[styles.bottomNav, { backgroundColor: isDark ? '#181818' : '#fff' }]}>
-        <TouchableOpacity onPress={() => router.push("/home")}>
-          <MaterialCommunityIcons name="home" size={30} color={isDark ? '#90CAF9' : '#0E457D'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/ongs")}>
-          <MaterialIcons name="pets" size={30} color={isDark ? '#90CAF9' : '#0E457D'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/favoritos")}>
-          <AntDesign name="heart" size={30} color={isDark ? '#90CAF9' : '#0E457D'} />
-        </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => router.push("/perfil")}>
-          <FontAwesome5 name="user-alt" size={30} color={isDark ? '#90CAF9' : '#0E457D'} />
-        </TouchableOpacity>
-      </View>
+      <BottomNav isDark={isDark} activePage="home" />
     </SafeAreaView>
   );
 }
@@ -384,13 +367,6 @@ const styles = StyleSheet.create({
   likeButton: { 
     backgroundColor: '#FF2BAA' 
   },
-
-  bottomNav: { 
-    height: 70, 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    alignItems: 'center'
-   },
 
   overlay: { 
     ...StyleSheet.absoluteFillObject, 

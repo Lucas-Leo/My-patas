@@ -11,10 +11,8 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
-import { AntDesign } from '@expo/vector-icons';
-import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useThemeContext } from '@/context/ThemeContext';
+import BottomNav from '@/components/BottomNav';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
@@ -170,58 +168,7 @@ const ProfileScreen = () => {
         </View>
 
       </ScrollView>
-            <View
-        style={[
-          styles.bottomNav,
-          { backgroundColor: isDark ? '#181818' : '#fff' },
-        ]}
-      >
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/home")}
-        >
-          <MaterialIcons
-            name="home"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/ongs")}
-        >
-          <MaterialIcons
-            name="pets"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/favoritos")}
-        >
-          <AntDesign
-            name="heart"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/perfil")}
-        >
-          <FontAwesome5
-            name="user-alt"
-            size={30}
-            color={isDark ? '#90CAF9' : '#0E457D'}
-          />
-        </TouchableOpacity>
-
-      </View>
+      <BottomNav isDark={isDark} activePage="perfil" />
     </SafeAreaView>
   );
 };
@@ -332,28 +279,6 @@ const styles = StyleSheet.create({
     color: "#333",
   },
 
-  bottomNav: {
-    width: "100%",
-    height: 70,
-    backgroundColor: "#fff",
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
-    position: "absolute",
-    bottom: 0,
-    flexDirection: "row",
-    justifyContent: "space-around",
-    alignItems: "center",
-  },
-
-  navItem: {
-    padding: 10,
-  },
-
-  bottomIcon: {
-    width: 35,
-    height: 35,
-    tintColor: "#0E457D",
-  },
 });
 
 export default ProfileScreen;
