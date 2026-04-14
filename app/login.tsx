@@ -66,6 +66,7 @@ export default function Login() {
       <View style={styles.main}>
 
         <View style={styles.containerInput}>
+          {login ? <Text style={styles.fieldLabel}>E-mail</Text> : null}
           <TextInput style={styles.input}
             value={login || ""}
             placeholder=" Digite seu e-mail ..."
@@ -74,9 +75,11 @@ export default function Login() {
         </View>
 
         <View style={styles.containerInput}>
+          {password ? <Text style={styles.fieldLabel}>Senha</Text> : null}
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.inputPassword}
+              value={password || ""}
               placeholder="Digite sua senha..."
               onChangeText={(e) => setPassword(e)}
               secureTextEntry={!showPassword}
@@ -192,6 +195,13 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     fontSize: 16,
     padding: 20,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0E457D",
+    marginBottom: 6,
+    marginLeft: 14,
   },
 
   link: {

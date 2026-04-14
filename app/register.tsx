@@ -1,6 +1,7 @@
 import {
   Alert,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,18 +11,19 @@ import {
 
 import { Link, useNavigation } from "expo-router";
 import { useState } from "react";
-
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 
 export default function Register() {
-  const [nome, setNome] = useState<string>(null);
-  const [login, setLogin] = useState<string>(null);
-  const [password, setPassword] = useState<string>(null);
-  const [password2, setPassword2] = useState<string>(null);
-  const [viewPassword, setViewPassord] = useState<boolean>(false);
+  const [nome, setNome] = useState<string>("");
+  const [login, setLogin] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [password2, setPassword2] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [celular, setCelular] = useState<string>("");
+  const isFormComplete = !!(nome && login && password && password2 && celular);
 
   const navigation = useNavigation();
 
@@ -71,6 +73,10 @@ export default function Register() {
 
   return (
     <View style={styles.container}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
       <View style={styles.header} >
 
         <Image
@@ -86,6 +92,7 @@ export default function Register() {
       <View style={styles.main}>
 
         <View style={styles.containerInput}>
+          {nome ? <Text style={styles.fieldLabel}>Nome</Text> : null}
           <TextInput style={styles.input}
             placeholder="Nome"
             onChangeText={(value) => { setNome(value) }}
@@ -94,6 +101,7 @@ export default function Register() {
         </View>
 
         <View style={styles.containerInput}>
+          {login ? <Text style={styles.fieldLabel}>E-mail</Text> : null}
           <TextInput style={styles.input}
             placeholder="E-mail"
             onChangeText={(value) => { setLogin(value) }}
@@ -102,6 +110,7 @@ export default function Register() {
         </View>
 
         <View style={styles.containerInput}>
+          {celular ? <Text style={styles.fieldLabel}>Telefone</Text> : null}
           <TextInput style={styles.input}
             placeholder="Telefone"
             onChangeText={(value) => { setCelular(formatarTelefone(value)) }}
@@ -111,39 +120,60 @@ export default function Register() {
         </View>
 
         <View style={styles.containerInput}>
+          {password ? <Text style={styles.fieldLabel}>Senha</Text> : null}
 
           <View style={styles.containerSenha}>
 
-            <TextInput style={styles.input}
+            <TextInput style={styles.inputPassword}
               placeholder="Senha"
               onChangeText={(value) => { setPassword(value) }}
               value={password || ""}
-              secureTextEntry={viewPassword}
+              secureTextEntry={!showPassword}
               maxLength={8}
             />
 
             <TouchableOpacity
-              onPress={() => { setViewPassord(!viewPassword) }}
+              onPress={() => { setShowPassword(!showPassword) }}
               style={[styles.iconPassword]}
             >
-              {(!viewPassword) ? (<EyeOff size={30} color={"red"} />) :
-                (<Eye size={30} color={"blue"} />)}
+              <Ionicons
+                name={showPassword ? "eye" : "eye-off"}
+                size={24}
+                color="#0E457D"
+              />
             </TouchableOpacity>
           </View>
         </View>
 
         <View style={styles.containerInput}>
-          <TextInput style={styles.input}
-            placeholder="Confirme sua senha"
-            onChangeText={(valor) => { setPassword2(valor) }}
-            value={password2 || ""}
-            secureTextEntry={true}
-            maxLength={8}
-          />
+          {password2 ? <Text style={styles.fieldLabel}>Confirme sua senha</Text> : null}
+          <View style={styles.containerSenha}>
+            <TextInput
+              style={styles.inputPassword}
+              placeholder="Confirme sua senha"
+              onChangeText={(valor) => { setPassword2(valor) }}
+              value={password2 || ""}
+              secureTextEntry={!showConfirmPassword}
+              maxLength={8}
+            />
+            <TouchableOpacity
+              onPress={() => { setShowConfirmPassword(!showConfirmPassword) }}
+              style={styles.iconPassword}
+            >
+              <Ionicons
+                name={showConfirmPassword ? "eye" : "eye-off"}
+                size={24}
+                color="#0E457D"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.button]}
+          style={[
+            styles.button,
+            { backgroundColor: isFormComplete ? "#FF42B3" : "#0E457D" },
+          ]}
           onPress={() => (onClickRegistrar())}>
           <Text style={[styles.buttonText]} >
             Criar Conta
@@ -165,6 +195,7 @@ export default function Register() {
         </Link>
 
       </View>
+      </ScrollView>
     </View>
   );
 }
@@ -178,30 +209,32 @@ export const styles = StyleSheet.create({
     paddingLeft: 20,
     paddingRight: 20,
   },
+  scrollContent: {
+    paddingBottom: 20,
+  },
 
   header: {
-    flex: 3 / 10,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+    marginTop: 20,
   },
 
   main: {
-    flex: 5 / 10,
     width: '100%',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 20,
     gap: 20,
   },
 
   footer: {
-    flex: 2 / 10,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingTop: 10,
+    paddingBottom: 20,
     flexDirection: "row",
     gap: 5,
   },
@@ -237,6 +270,13 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     padding: 20,
   },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#0E457D",
+    marginBottom: 6,
+    marginLeft: 14,
+  },
 
   link: {
     color: "#0E457D",
@@ -260,12 +300,23 @@ export const styles = StyleSheet.create({
   },
 
   containerSenha: {
+    backgroundColor: '#F1F5F4',
     flexDirection: "row",
-    gap: 3,
+    alignItems: "center",
+    width: "100%",
+    height: 60,
+    borderRadius: 30,
+    paddingLeft: 20,
+    paddingRight: 20,
+  },
+  inputPassword: {
+    flex: 1,
+    fontSize: 16,
   },
 
   iconPassword: {
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    paddingHorizontal: 5,
   }
 });

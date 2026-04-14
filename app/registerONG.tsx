@@ -1,6 +1,7 @@
 import {
 Alert,
 Image,
+ScrollView,
 StyleSheet,
 Text,
 TextInput,
@@ -10,7 +11,7 @@ View
 
 import { Link, router } from "expo-router";
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react-native";
+import { Ionicons } from '@expo/vector-icons';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 
@@ -22,8 +23,10 @@ const [login,setLogin] = useState("");
 const [cnpj,setCNPJ] = useState("");
 const [password,setPassword] = useState("");
 const [password2,setPassword2] = useState("");
-const [viewPassword,setViewPassord] = useState(true);
+const [showPassword,setShowPassword] = useState(false);
+const [showConfirmPassword,setShowConfirmPassword] = useState(false);
 const [celular,setCelular] = useState("");
+const isFormComplete = !!(nome && nomeresponsavel && login && cnpj && celular && password && password2);
 
 const [usuarioComumCriado,setUsuarioComumCriado] = useState(false);
 
@@ -138,6 +141,10 @@ Alert.alert("Erro","Ocorreu um problema durante o processo.")
 return(
 <View style={styles.container}>
 
+<ScrollView
+showsVerticalScrollIndicator={false}
+contentContainerStyle={styles.scrollContent}
+>
 <View style={styles.header}>
 <Image source={logoApp} style={styles.logo}/>
 <Text style={styles.inputText}>Criar Conta</Text>
@@ -146,6 +153,7 @@ return(
 <View style={styles.main}>
 
 <View style={styles.containerInput}>
+{nome ? <Text style={styles.fieldLabel}>Nome da ONG</Text> : null}
 <TextInput
 style={styles.input}
 placeholder="Nome da ONG"
@@ -155,6 +163,7 @@ value={nome}
 </View>
 
 <View style={styles.containerInput}>
+{nomeresponsavel ? <Text style={styles.fieldLabel}>Nome do Responsável</Text> : null}
 <TextInput
 style={styles.input}
 placeholder="Nome do Responsável"
@@ -164,6 +173,7 @@ value={nomeresponsavel}
 </View>
 
 <View style={styles.containerInput}>
+{login ? <Text style={styles.fieldLabel}>E-mail</Text> : null}
 <TextInput
 style={styles.input}
 placeholder="E-mail"
@@ -173,6 +183,7 @@ value={login}
 </View>
 
 <View style={styles.containerInput}>
+{cnpj ? <Text style={styles.fieldLabel}>CNPJ</Text> : null}
 <TextInput
 style={styles.input}
 placeholder="CNPJ"
@@ -184,6 +195,7 @@ maxLength={18}
 </View>
 
 <View style={styles.containerInput}>
+{celular ? <Text style={styles.fieldLabel}>Telefone</Text> : null}
 <TextInput
 style={styles.input}
 placeholder="Telefone"
@@ -195,27 +207,28 @@ maxLength={15}
 </View>
 
 <View style={styles.containerInput}>
+{password ? <Text style={styles.fieldLabel}>Senha</Text> : null}
 
 <View style={styles.containerSenha}>
 
 <TextInput
-style={styles.input}
+style={styles.inputPassword}
 placeholder="Senha"
 onChangeText={(value)=>setPassword(value)}
 value={password}
-secureTextEntry={viewPassword}
+secureTextEntry={!showPassword}
 maxLength={8}
 />
 
 <TouchableOpacity
-onPress={()=>setViewPassord(!viewPassword)}
+onPress={()=>setShowPassword(!showPassword)}
 style={styles.iconPassword}
 >
-
-{!viewPassword ?
-<Eye size={30} color={"blue"}/> :
-<EyeOff size={30} color={"red"}/>
-}
+<Ionicons
+name={showPassword ? "eye" : "eye-off"}
+size={24}
+color="#0E457D"
+/>
 
 </TouchableOpacity>
 
@@ -224,18 +237,34 @@ style={styles.iconPassword}
 </View>
 
 <View style={styles.containerInput}>
+{password2 ? <Text style={styles.fieldLabel}>Confirme sua senha</Text> : null}
+<View style={styles.containerSenha}>
 <TextInput
-style={styles.input}
+style={styles.inputPassword}
 placeholder="Confirme sua senha"
 onChangeText={(value)=>setPassword2(value)}
 value={password2}
-secureTextEntry={true}
+secureTextEntry={!showConfirmPassword}
 maxLength={8}
 />
+<TouchableOpacity
+onPress={()=>setShowConfirmPassword(!showConfirmPassword)}
+style={styles.iconPassword}
+>
+<Ionicons
+name={showConfirmPassword ? "eye" : "eye-off"}
+size={24}
+color="#0E457D"
+/>
+</TouchableOpacity>
+</View>
 </View>
 
 <TouchableOpacity
-style={styles.button}
+style={[
+styles.button,
+{ backgroundColor: isFormComplete ? "#FF42B3" : "#0E457D" }
+]}
 onPress={()=>onClickRegistrarONG()}
 >
 
@@ -261,6 +290,7 @@ Fazer Login.
 
 </View>
 
+</ScrollView>
 </View>
 )
 }
@@ -274,29 +304,32 @@ backgroundColor:"#ffffff",
 paddingLeft:20,
 paddingRight:20
 },
+scrollContent:{
+paddingBottom:20
+},
 
 header:{
-flex:3/10,
-width:"100%",
-alignItems:"center",
-justifyContent:"center",
-padding:20
-},
-
-main:{
-flex:5/10,
-width:"100%",
-alignItems:"center",
-justifyContent:"center",
-padding:20
-},
-
-footer:{
-flex:2/10,
 width:"100%",
 alignItems:"center",
 justifyContent:"center",
 padding:20,
+marginTop:20
+},
+
+main:{
+width:"100%",
+alignItems:"center",
+justifyContent:"flex-start",
+padding:20,
+gap:20
+},
+
+footer:{
+width:"100%",
+alignItems:"center",
+justifyContent:"center",
+paddingTop:10,
+paddingBottom:20,
 flexDirection:"row",
 gap:5
 },
@@ -317,8 +350,7 @@ inputText:{
 fontWeight:"bold",
 fontSize:30,
 color:"#0E457D",
-padding:30,
-marginBottom:30
+padding:30
 },
 
 input:{
@@ -330,6 +362,13 @@ borderRadius:30,
 fontSize:16,
 padding:20
 },
+fieldLabel:{
+fontSize:13,
+fontWeight:"600",
+color:"#0E457D",
+marginBottom:6,
+marginLeft:14
+},
 
 link:{
 color:"#0E457D",
@@ -337,7 +376,7 @@ fontWeight:"bold"
 },
 
 button:{
-marginTop:10,
+marginTop:45,
 backgroundColor:"#0E457D",
 width:"100%",
 height:50,
@@ -353,13 +392,24 @@ fontWeight:"bold"
 },
 
 containerSenha:{
+backgroundColor:"#F1F5F4",
 flexDirection:"row",
-gap:3
+alignItems:"center",
+width:"100%",
+height:60,
+borderRadius:30,
+paddingLeft:20,
+paddingRight:20
+},
+inputPassword:{
+flex:1,
+fontSize:16
 },
 
 iconPassword:{
 alignItems:"center",
-justifyContent:"center"
+justifyContent:"center",
+paddingHorizontal:5
 }
 
 });

@@ -108,7 +108,6 @@ const styles = StyleSheet.create({
   link: {
     color: "#0E457D",
     fontWeight: "bold",
-    marginTop: 5,
   },
 
   footer: {
