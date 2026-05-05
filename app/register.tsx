@@ -9,7 +9,8 @@ import {
   View
 } from "react-native";
 
-import { Link, useNavigation } from "expo-router";
+import axios, { AxiosError } from "axios";
+import { Link, useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
 
@@ -27,8 +28,38 @@ export default function Register() {
   const [dataNascimento, setDataNascimento] = useState<string>("");
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const router = useRouter();
 
   const isFormComplete = !!(nome && login && password && password2 && cpf && dataNascimento);
+
+  type UsuarioResponse = {
+    mensagem?: string;
+    erro?: string;
+  };
+
+  async function criarConta(): Promise<UsuarioResponse> {
+    try {
+      const res = await axios.post<UsuarioResponse>(
+        "http://192.168.14.214:6788/usuarios",
+        {
+          nome,
+          email: login,
+          data_nasc: dataNascimento,
+          cpf: cpf.replace(/\D/g, ""),
+          senha: password
+        }
+      );
+
+      return res.data;
+
+    } catch (error) {
+      const err = error as AxiosError<UsuarioResponse>;
+
+      console.log(err.response?.data || err.message);
+      throw err;
+
+    }
+  }
 
   const navigation = useNavigation();
 
@@ -102,28 +133,17 @@ export default function Register() {
     return idade;
   }
 
-  function onClickRegistrar() {
+  async function onClickRegistrar(): Promise<void> {
     if (!nome || !login || !password || !password2 || !cpf || !dataNascimento) {
       Alert.alert("Alerta:", "Preencha todos os campos obrigatórios");
       return;
-    }
-
-    if (!validarEmail(login)) {
+    } else if (!validarEmail(login)) {
       Alert.alert("Erro", "Digite um e-mail válido");
       return;
-    }
-
-    if (!validarCPF(cpf)) {
+    } else if (!validarCPF(cpf)) {
       Alert.alert("Erro", "CPF inválido");
       return;
-    }
-
-    if (CPFsCadastrados.includes(cpf.replace(/\D/g, ""))) {
-      Alert.alert("Erro", "Já existe uma conta com esse CPF");
-      return;
-    }
-
-    if (!validarData(dataNascimento)) {
+    } else if (!validarData(dataNascimento)) {
       Alert.alert("Erro", "Data de nascimento inválida");
       return;
     }
@@ -146,10 +166,18 @@ export default function Register() {
     }
 
     try {
+      await criarConta();
+
       Alert.alert("Sucesso", "Conta criada com sucesso");
-      navigation.navigate("login" as never);
+      router.push("/login");
+
     } catch (error) {
-      Alert.alert("Erro", "Ocorreu um problema ao criar a conta");
+      const err = error as AxiosError<{ erro?: string }>;
+
+      Alert.alert(
+        "Erro",
+        err.response?.data?.erro || "Ocorreu um problema ao criar a conta"
+      );
     }
   }
 
