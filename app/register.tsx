@@ -46,7 +46,8 @@ export default function Register() {
           email: login,
           data_nasc: dataNascimento,
           cpf: cpf.replace(/\D/g, ""),
-          senha: password
+          senha: password,
+          fk_idtipo: 1
         }
       );
 
@@ -140,9 +141,9 @@ export default function Register() {
     } else if (!validarEmail(login)) {
       Alert.alert("Erro", "Digite um e-mail válido");
       return;
-    } else if (!validarCPF(cpf)) {
-      Alert.alert("Erro", "CPF inválido");
-      return;
+    // } else if (!validarCPF(cpf)) {
+    //   Alert.alert("Erro", "CPF inválido");
+    //   return;
     } else if (!validarData(dataNascimento)) {
       Alert.alert("Erro", "Data de nascimento inválida");
       return;
