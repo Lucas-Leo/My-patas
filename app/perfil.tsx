@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,10 @@ import {
   SafeAreaView,
   Switch,
 } from 'react-native';
+
+import axios, { AxiosError } from "axios";
+import * as SecureStore from "expo-secure-store";
+
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';
@@ -17,10 +21,29 @@ import BottomNav from '@/components/BottomNav';
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
-const ProfileScreen = () => {
+function ProfileScreen() {
   const router = useRouter();
   const { theme, toggleTheme } = useThemeContext();
   const isDark = theme === 'dark';
+
+  const [usuario, setUsuario] = useState<any>(null);
+
+  useEffect(() => {
+    async function carregarUsuario() {
+      const usuarioSalvo = await SecureStore.getItemAsync("usuario");
+
+      if (usuarioSalvo) {
+        const dadosUsuario = JSON.parse(usuarioSalvo);
+        setUsuario(dadosUsuario);
+      }
+    }
+
+    carregarUsuario();
+  }, []);
+
+  if (!usuario) {
+    return <Text>Carregando...</Text>;
+  }
 
   return (
     <SafeAreaView
@@ -37,7 +60,7 @@ const ProfileScreen = () => {
       >
 
         <View style={styles.header}>
-           <Image height={50} width={100} source={logoApp} style={styles.logo}  />
+          <Image height={50} width={100} source={logoApp} style={styles.logo} />
         </View>
 
         <View style={styles.photoContainer}>
@@ -59,7 +82,7 @@ const ProfileScreen = () => {
                 { color: isDark ? '#FFFFFF' : '#000000' },
               ]}
             >
-              Margarete da Rosa Silva
+              {usuario.nome}
             </Text>
             <TouchableOpacity style={styles.editIcon}>
               <Icon
@@ -82,7 +105,7 @@ const ProfileScreen = () => {
                 { color: isDark ? '#FFFFFF' : '#000000' },
               ]}
             >
-              margareterosasilva@gmail.com
+              {usuario.email}
             </Text>
             <TouchableOpacity style={styles.editIcon}>
               <Icon
@@ -92,6 +115,8 @@ const ProfileScreen = () => {
               />
             </TouchableOpacity>
           </View>
+
+
 
           <View style={styles.divider} />
 
@@ -105,7 +130,7 @@ const ProfileScreen = () => {
                 { color: isDark ? '#FFFFFF' : '#000000' },
               ]}
             >
-              *********
+******
             </Text>
             <TouchableOpacity style={styles.editIcon}>
               <Icon

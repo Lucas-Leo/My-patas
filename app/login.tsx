@@ -1,3 +1,4 @@
+import * as SecureStore from 'expo-secure-store';
 import {
   Alert,
   Image,
@@ -8,6 +9,7 @@ import {
   View
 } from "react-native";
 
+import axios, { AxiosError } from "axios";
 import { Link, useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
@@ -22,6 +24,58 @@ export default function Login() {
   const [password, setPassword] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Tipo da resposta do backend
+type LoginResponse = {
+  mensagem?: string;
+  erro?: string;
+  token?: string;
+  usuario?: {
+    id: number;
+    nome: string;
+    email: string;
+    telefone: string | null;
+    data_nasc: string;
+    cpf: string;
+    foto: string | null;
+    fk_idsexo: number | null;
+    fk_idendereco: number | null;
+    fk_idtipo: number;
+    data_criacao: string;
+    data_att: string;
+  };
+};
+
+async function loginUsuario(): Promise<LoginResponse> {
+  try {
+    console.log("Iniciando login...");
+
+    const res = await axios.post<LoginResponse>(
+      "http://192.168.15.8:6788/login",
+      {
+        email: login,
+        senha: password,
+      }
+    );
+
+    console.log("Login concluído com sucesso.");
+    console.log("Status HTTP:", res.status);
+    console.log("Resposta do servidor:", res.data);
+
+    return res.data;
+  } catch (error) {
+    const err = error as AxiosError<LoginResponse>;
+
+    console.log("=== ERRO NO LOGIN ===");
+    console.log("Mensagem:", err.message);
+    console.log("Código:", err.code);
+    console.log("Status HTTP:", err.response?.status);
+    console.log("Resposta do servidor:", err.response?.data);
+    console.log("=====================");
+
+    throw err;
+  }
+}
+
   function validateEmail(email: string) {
     return /\S+@\S+\.\S+/.test(email);
   }
@@ -31,9 +85,12 @@ export default function Login() {
     return;
   }
 
-  function OnClickLogin() {
+  async function OnClickLogin(): Promise<void> {
     if (!login || !password) {
-      Alert.alert("Campos obrigatórios", "Preencha todos os campos para continuar.");
+      Alert.alert(
+        "Campos obrigatórios",
+        "Preencha todos os campos para continuar."
+      );
       return;
     }
 
@@ -42,13 +99,38 @@ export default function Login() {
       return;
     }
 
-    if (login !== "teste@teste.com" || password !== "123") {
-      Alert.alert("Erro no login", "E-mail ou senha incorretos.");
-      return;
-    }
+    try {
+      const resposta = await loginUsuario();
 
-    Alert.alert("Sucesso", "Login realizado com sucesso!");
-    router.push("/home");
+      if (!resposta.token) {
+        Alert.alert("Erro", "Token não foi retornado pelo servidor.");
+        return;
+      }
+
+      await SecureStore.setItemAsync("token", resposta.token);
+
+      if (resposta.usuario) {
+        await SecureStore.setItemAsync(
+          "usuario",
+          JSON.stringify(resposta.usuario)
+        );
+      }
+
+      Alert.alert(
+        "Sucesso",
+        resposta.mensagem || "Login realizado com sucesso!"
+      );
+
+      router.push("/perfil");
+    } catch (error) {
+      const err = error as AxiosError<{ erro?: string }>;
+
+      Alert.alert(
+        "Erro",
+        err.response?.data?.erro ||
+        "Ocorreu um problema ao realizar login"
+      );
+    }
   }
 
   return (
@@ -117,19 +199,19 @@ export default function Login() {
 
       </View>
 
-        <View style={styles.footer}>
-          <Text>
-            Não tenho conta.
-          </Text>
+      <View style={styles.footer}>
+        <Text>
+          Não tenho conta.
+        </Text>
 
-          <Link href="/criarconta" asChild>
-            <TouchableOpacity>
-              <Text style={styles.link}>
-                Criar conta agora.
-              </Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
+        <Link href="/criarconta" asChild>
+          <TouchableOpacity>
+            <Text style={styles.link}>
+              Criar conta agora.
+            </Text>
+          </TouchableOpacity>
+        </Link>
+      </View>
     </View>
   );
 }
@@ -224,7 +306,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold"
   },
-  
+
   disabledButton: {
     marginTop: 45,
     width: "100%",

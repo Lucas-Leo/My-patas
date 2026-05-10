@@ -4,6 +4,7 @@ const path = require("path");
 const app = express();
 const cors = require('cors');
 
+const url = process.env.API_URL;
 
 dotenv.config();
 

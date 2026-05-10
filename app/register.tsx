@@ -40,7 +40,7 @@ export default function Register() {
   async function criarConta(): Promise<UsuarioResponse> {
     try {
       const res = await axios.post<UsuarioResponse>(
-        "http://192.168.15.4:6788/usuarios",
+        "http://192.168.14.214:6788/usuarios",
         {
           nome,
           email: login,
