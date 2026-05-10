@@ -12,6 +12,8 @@ import {
   ScrollView,
 } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
+import { Alert } from "react-native";
+import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
@@ -34,11 +36,27 @@ const initialPets = [
   { id: 12, name: 'Chicó', ong: 'Aumigos', description: 'Brincalhão e curioso.', image: require('@/assets/images/gato06.jpg') },
 ];
 
+type Usuario = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  data_nasc: string;
+  cpf: string;
+  foto: string | null;
+  fk_idsexo: number | null;
+  fk_idendereco: number | null;
+  fk_idtipo: number;
+  data_criacao: string;
+  data_att: string;
+};
+
 export default function SwipeScreen() {
   const router = useRouter();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
+  const [carregando, setCarregando] = useState(true);
   const [pets, setPets] = useState(initialPets);
   const [selectedPet, setSelectedPet] = useState(null);
 
@@ -49,6 +67,78 @@ export default function SwipeScreen() {
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
   const currentPet = pets[0];
+
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+  useEffect(() => {
+    async function carregarUsuario() {
+      const usuarioSalvo = await SecureStore.getItemAsync("usuario");
+
+      if (usuarioSalvo) {
+        const dadosUsuario = JSON.parse(usuarioSalvo);
+        setUsuario(dadosUsuario);
+      }
+
+      setCarregando(false);
+
+    }
+
+    carregarUsuario();
+  }, []);
+
+  useEffect(() => {
+    // Aguarda terminar o carregamento
+    if (carregando) return;
+
+    // Se não existir usuário, pode redirecionar para login
+    if (!usuario) {
+      router.replace("/login");
+      return;
+    }
+
+    // Verifica se o perfil está incompleto
+    const perfilIncompleto =
+      !usuario.telefone ||
+      !usuario.fk_idsexo ||
+      !usuario.fk_idendereco ||
+      !usuario.foto;
+
+    if (perfilIncompleto) {
+      Alert.alert(
+        "Perfil incompleto",
+        "Você precisa completar seu perfil antes de continuar.",
+        [
+          {
+            text: "Completar perfil",
+            onPress: () => {
+              router.replace("/perfil");
+            },
+          },
+        ],
+        {
+          cancelable: false,
+        }
+      );
+    }
+  }, [usuario, carregando]);
+
+  // Enquanto carrega ou enquanto o perfil estiver incompleto não mostra o restante do aplicativo
+  if (carregando) {
+    return null;
+  }
+
+  const perfilIncompleto =
+    !usuario ||
+    !usuario.telefone ||
+    !usuario.fk_idsexo ||
+    !usuario.fk_idendereco ||
+    !usuario.foto;
+
+  if (perfilIncompleto) {
+    return null;
+  }
+
+
 
   useEffect(() => {
     if (pets.length === 0) {
@@ -297,121 +387,121 @@ export default function SwipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { 
-    flex: 1, 
-    marginTop: 45 
+  safeArea: {
+    flex: 1,
+    marginTop: 45
   },
 
-  header: { 
-    alignItems: 'center', 
-    paddingVertical: 30, 
-    marginTop: 20 
+  header: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    marginTop: 20
   },
 
-  logo: { 
-    width: 200, 
-    height: 90 
+  logo: {
+    width: 200,
+    height: 90
   },
 
-  mainContent: { 
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  mainContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
 
-  cardContainer: { 
-    width: width * 0.9, 
-    height: width * 1.2, 
-    borderRadius: 15, 
-    overflow: 'hidden' 
+  cardContainer: {
+    width: width * 0.9,
+    height: width * 1.2,
+    borderRadius: 15,
+    overflow: 'hidden'
   },
 
-  petImage: { 
-    width: '100%', 
-    height: '100%', 
+  petImage: {
+    width: '100%',
+    height: '100%',
     position: 'absolute'
-   },
+  },
 
-  infoBox: { 
+  infoBox: {
     position: 'absolute',
-    bottom: 0, 
-    padding: 15, 
-    width: '100%', 
-    backgroundColor: 'rgba(0,0,0,0.4)'
-   },
-
-  petName: { 
-    fontSize: 26, 
-    fontWeight: 'bold' 
-  },
-
-  actionButtons: { 
-    flexDirection: 'row',
-     marginTop: 20, 
-     width: width * 0.6, 
-     justifyContent: 'space-around' 
-    },
-
-  button: { 
-    width: 70, 
-    height: 70, 
-    borderRadius: 35, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-
-  skipButton: { 
-    backgroundColor: '#0E457D'
-   },
-
-  likeButton: { 
-    backgroundColor: '#FF2BAA' 
-  },
-
-  overlay: { 
-    ...StyleSheet.absoluteFillObject, 
-    backgroundColor: 'rgba(0,0,0,0.5)'
-   },
-
-  bottomSheet: { 
-    position: 'absolute', 
     bottom: 0,
-     width: '100%', 
-     height: height * 0.85, 
-     backgroundColor: '#fff',
-      borderTopLeftRadius: 20, 
-      borderTopRightRadius: 20 
-    },
-
-  sheetImage: { 
-    width: '100%', 
-    height: 250 
+    padding: 15,
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.4)'
   },
 
-  sheetContent: { 
-    padding: 20 
+  petName: {
+    fontSize: 26,
+    fontWeight: 'bold'
   },
 
-  sheetTitle: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    marginBottom: 10 
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 20,
+    width: width * 0.6,
+    justifyContent: 'space-around'
   },
 
-  section: { 
-    marginBottom: 15
-   },
-
-  sectionTitle: { 
-    fontWeight: 'bold', 
-    marginBottom: 5 
-  },
-
-  actionPrimary: { 
-    marginTop: 20, 
-    backgroundColor: '#FF2BAA', 
-    padding: 15, 
-    borderRadius: 15, 
+  button: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
     alignItems: 'center'
-   },
+  },
+
+  skipButton: {
+    backgroundColor: '#0E457D'
+  },
+
+  likeButton: {
+    backgroundColor: '#FF2BAA'
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)'
+  },
+
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    height: height * 0.85,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20
+  },
+
+  sheetImage: {
+    width: '100%',
+    height: 250
+  },
+
+  sheetContent: {
+    padding: 20
+  },
+
+  sheetTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10
+  },
+
+  section: {
+    marginBottom: 15
+  },
+
+  sectionTitle: {
+    fontWeight: 'bold',
+    marginBottom: 5
+  },
+
+  actionPrimary: {
+    marginTop: 20,
+    backgroundColor: '#FF2BAA',
+    padding: 15,
+    borderRadius: 15,
+    alignItems: 'center'
+  },
 });
