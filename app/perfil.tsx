@@ -12,7 +12,6 @@ import {
 
 import axios, { AxiosError } from "axios";
 import * as SecureStore from "expo-secure-store";
-
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';

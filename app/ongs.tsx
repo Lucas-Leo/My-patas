@@ -1,3 +1,4 @@
+
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import { AntDesign, Ionicons } from '@expo/vector-icons';
@@ -16,6 +17,9 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+
+import * as SecureStore from "expo-secure-store";
+import { useRouter } from "expo-router";
 
 const { width } = Dimensions.get('window');
 
@@ -36,6 +40,21 @@ type Ong = {
   descricao: string;
   imagem: any;
   pets: Pet[];
+};
+
+type Usuario = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  data_nasc: string;
+  cpf: string;
+  foto: string | null;
+  fk_idsexo: number | null;
+  fk_idendereco: number | null;
+  fk_idtipo: number;
+  data_criacao: string;
+  data_att: string;
 };
 
 const ONGS = [
@@ -226,10 +245,14 @@ const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }: OngCardProps) =
 };
 
 export default function OngsScreen() {
+  const router = useRouter();
+  const [carregando, setCarregando] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
+
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   const closePetModal = () => setSelectedPet(null);
   const handleAdotar = () => {
@@ -240,6 +263,74 @@ export default function OngsScreen() {
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
+
+    useEffect(() => {
+      async function carregarUsuario() {
+        const usuarioSalvo = await SecureStore.getItemAsync("usuario");
+  
+        if (usuarioSalvo) {
+          const dadosUsuario = JSON.parse(usuarioSalvo);
+          setUsuario(dadosUsuario);
+        }
+  
+        setCarregando(false);
+  
+      }
+  
+      carregarUsuario();
+    }, []);
+  
+    useEffect(() => {
+      // Aguarda terminar o carregamento
+      if (carregando) return;
+  
+      // Se não existir usuário, pode redirecionar para login
+      if (!usuario) {
+        router.replace("/login");
+        return;
+      }
+  
+      // Verifica se o perfil está incompleto
+      const perfilIncompleto =
+        !usuario.telefone ||
+        !usuario.fk_idsexo ||
+        !usuario.fk_idendereco ||
+        !usuario.foto;
+  
+      if (perfilIncompleto) {
+        Alert.alert(
+          "Perfil incompleto",
+          "Você precisa completar seu perfil antes de continuar.",
+          [
+            {
+              text: "Completar perfil",
+              onPress: () => {
+                router.replace("/perfil");
+              },
+            },
+          ],
+          {
+            cancelable: false,
+          }
+        );
+      }
+    }, [usuario, carregando]);
+  
+    // Enquanto carrega ou enquanto o perfil estiver incompleto não mostra o restante do aplicativo
+    if (carregando) {
+      return null;
+    }
+  
+    const perfilIncompleto =
+      !usuario ||
+      !usuario.telefone ||
+      !usuario.fk_idsexo ||
+      !usuario.fk_idendereco ||
+      !usuario.foto;
+  
+    if (perfilIncompleto) {
+      return null;
+    }
 
   return (
     <SafeAreaView

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,104 @@ import {
   TouchableOpacity,
   SafeAreaView,
 } from 'react-native';
+import * as SecureStore from "expo-secure-store";
+import { Alert } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
+type Usuario = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  data_nasc: string;
+  cpf: string;
+  foto: string | null;
+  fk_idsexo: number | null;
+  fk_idendereco: number | null;
+  fk_idtipo: number;
+  data_criacao: string;
+  data_att: string;
+};
+
 export default function Favoritos() {
+  const router = useRouter();
+
+  const [carregando, setCarregando] = useState(true);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+    useEffect(() => {
+      async function carregarUsuario() {
+        const usuarioSalvo = await SecureStore.getItemAsync("usuario");
+  
+        if (usuarioSalvo) {
+          const dadosUsuario = JSON.parse(usuarioSalvo);
+          setUsuario(dadosUsuario);
+        }
+  
+        setCarregando(false);
+  
+      }
+  
+      carregarUsuario();
+    }, []);
+  
+    useEffect(() => {
+      // Aguarda terminar o carregamento
+      if (carregando) return;
+  
+      // Se não existir usuário, pode redirecionar para login
+      if (!usuario) {
+        router.replace("/login");
+        return;
+      }
+  
+      // Verifica se o perfil está incompleto
+      const perfilIncompleto =
+        !usuario.telefone ||
+        !usuario.fk_idsexo ||
+        !usuario.fk_idendereco ||
+        !usuario.foto;
+  
+      if (perfilIncompleto) {
+        Alert.alert(
+          "Perfil incompleto",
+          "Você precisa completar seu perfil antes de continuar.",
+          [
+            {
+              text: "Completar perfil",
+              onPress: () => {
+                router.replace("/perfil");
+              },
+            },
+          ],
+          {
+            cancelable: false,
+          }
+        );
+      }
+    }, [usuario, carregando]);
+  
+    // Enquanto carrega ou enquanto o perfil estiver incompleto não mostra o restante do aplicativo
+    if (carregando) {
+      return null;
+    }
+  
+    const perfilIncompleto =
+      !usuario ||
+      !usuario.telefone ||
+      !usuario.fk_idsexo ||
+      !usuario.fk_idendereco ||
+      !usuario.foto;
+  
+    if (perfilIncompleto) {
+      return null;
+    }
+
   const favoritos = [
     {
       id: '1',
