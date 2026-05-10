@@ -24,11 +24,11 @@ Content-Type: application/json
 }
 
 ### Criar conta
-POST http://localhost:6788/usuarios/criarconta
+POST http://localhost:6788/usuarios
 Content-Type: application/json
 
 {
-    "nome": "Maria Fernanda da Silva",
+    "nome": "Maria Teste",
     "email": "mariateste@gmail.com",
     "data_nasc": "30/03/2007",
     "cpf": "11111111112",

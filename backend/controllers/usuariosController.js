@@ -39,7 +39,9 @@ const usuariosController = {
             response.status(201).json(data);
         } catch (error) {
             console.error("Erro ao conectar ao banco de dados:", error.message);
-            response.status(500).json({ message: "Falha ao executar a ação!" });
+            response.status(500).json({
+                erro: error.message || "Falha ao executar a ação!"
+            });
         }
     },
 

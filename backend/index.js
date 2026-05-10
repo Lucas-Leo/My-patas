@@ -21,6 +21,7 @@ const rotasRuas = require("./core/ruasRouters");
 const rotasEnderecos = require("./core/enderecosRouters");
 const rotasTiposUsuario = require("./core/tipos_usuarioRouters");
 const rotasUsuarios = require("./core/usuariosRouters");
+const rotasLogin = require("./core/loginRouters");
 
 app.use(cors());
 app.use(express.json());
@@ -50,6 +51,7 @@ app.use("/ruas", rotasRuas);
 app.use("/enderecos", rotasEnderecos);
 app.use("/tiposusuario", rotasTiposUsuario);
 app.use("/usuarios", rotasUsuarios);
+app.use("/login", rotasLogin);
 
 app.listen(port, () => {
     console.log(`servidor rodando na porta: ${port}`)
