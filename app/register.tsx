@@ -1,6 +1,7 @@
 import {
-  Alert,
+  Animated,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,28 +10,57 @@ import {
   View
 } from "react-native";
 
-import { Link, useNavigation } from "expo-router";
-import { useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
+import { Link, useNavigation } from "expo-router";
+import { useEffect, useRef, useState } from "react";
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 
-// Simulação de CPFs já cadastrados
 const CPFsCadastrados = ["12345678900"];
 
 export default function Register() {
+
   const [nome, setNome] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [password2, setPassword2] = useState<string>("");
   const [cpf, setCpf] = useState<string>("");
   const [dataNascimento, setDataNascimento] = useState<string>("");
+
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
-  const isFormComplete = !!(nome && login && password && password2 && cpf && dataNascimento);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const scaleAnim = useRef(new Animated.Value(0.7)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
+  const isFormComplete = !!(
+    nome &&
+    login &&
+    password &&
+    password2 &&
+    cpf &&
+    dataNascimento
+  );
 
   const navigation = useNavigation();
+
+  useEffect(() => {
+    if (modalVisible) {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [modalVisible]);
 
   function validarEmail(email: string) {
     return /\S+@\S+\.\S+/.test(email);
@@ -38,32 +68,43 @@ export default function Register() {
 
   function formatarCPF(valor: string) {
     let v = valor.replace(/\D/g, "").slice(0, 11);
+
     v = v.replace(/(\d{3})(\d)/, "$1.$2");
     v = v.replace(/(\d{3})(\d)/, "$1.$2");
     v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
     return v;
   }
 
   function validarCPF(cpf: string) {
     const clean = cpf.replace(/\D/g, "");
 
-    if (clean.length !== 11 || /^(\d)\1+$/.test(clean)) return false;
+    if (clean.length !== 11 || /^(\d)\1+$/.test(clean)) {
+      return false;
+    }
 
     let soma = 0;
+
     for (let i = 0; i < 9; i++) {
       soma += parseInt(clean[i]) * (10 - i);
     }
 
     let resto = (soma * 10) % 11;
+
     if (resto === 10 || resto === 11) resto = 0;
-    if (resto !== parseInt(clean[9])) return false;
+
+    if (resto !== parseInt(clean[9])) {
+      return false;
+    }
 
     soma = 0;
+
     for (let i = 0; i < 10; i++) {
       soma += parseInt(clean[i]) * (11 - i);
     }
 
     resto = (soma * 10) % 11;
+
     if (resto === 10 || resto === 11) resto = 0;
 
     return resto === parseInt(clean[10]);
@@ -71,13 +112,16 @@ export default function Register() {
 
   function formatarData(valor: string) {
     let v = valor.replace(/\D/g, "").slice(0, 8);
+
     v = v.replace(/(\d{2})(\d)/, "$1/$2");
     v = v.replace(/(\d{2})(\d)/, "$1/$2");
+
     return v;
   }
 
   function validarData(data: string) {
     const [dia, mes, ano] = data.split("/").map(Number);
+
     const date = new Date(ano, mes - 1, dia);
 
     return (
@@ -89,10 +133,13 @@ export default function Register() {
 
   function calcularIdade(data: string) {
     const [dia, mes, ano] = data.split("/").map(Number);
+
     const nascimento = new Date(ano, mes - 1, dia);
+
     const hoje = new Date();
 
     let idade = hoje.getFullYear() - nascimento.getFullYear();
+
     const m = hoje.getMonth() - nascimento.getMonth();
 
     if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
@@ -103,76 +150,120 @@ export default function Register() {
   }
 
   function onClickRegistrar() {
-    if (!nome || !login || !password || !password2 || !cpf || !dataNascimento) {
-      Alert.alert("Alerta:", "Preencha todos os campos obrigatórios");
+
+    if (!isFormComplete) {
       return;
     }
 
     if (!validarEmail(login)) {
-      Alert.alert("Erro", "Digite um e-mail válido");
       return;
     }
 
     if (!validarCPF(cpf)) {
-      Alert.alert("Erro", "CPF inválido");
       return;
     }
 
     if (CPFsCadastrados.includes(cpf.replace(/\D/g, ""))) {
-      Alert.alert("Erro", "Já existe uma conta com esse CPF");
       return;
     }
 
     if (!validarData(dataNascimento)) {
-      Alert.alert("Erro", "Data de nascimento inválida");
       return;
     }
 
     const idade = calcularIdade(dataNascimento);
 
     if (idade < 18) {
-      Alert.alert("Erro", "É necessário ter 18 anos ou mais");
       return;
     }
 
     if (password !== password2) {
-      Alert.alert("Erro", "As senhas não coincidem");
       return;
     }
 
     if (password.length < 4) {
-      Alert.alert("Erro", "A senha deve ter pelo menos 4 caracteres");
       return;
     }
 
-    try {
-      Alert.alert("Sucesso", "Conta criada com sucesso");
-      navigation.navigate("login" as never);
-    } catch (error) {
-      Alert.alert("Erro", "Ocorreu um problema ao criar a conta");
-    }
+    setModalVisible(true);
   }
 
   return (
     <View style={styles.container}>
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={modalVisible}
+      >
+        <View style={styles.overlay}>
+
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+              },
+            ]}
+          >
+
+            <Text style={styles.modalEmoji}>
+              🐾
+            </Text>
+
+            <Text style={styles.modalTitle}>
+              Falta só mais um passo
+            </Text>
+
+            <Text style={styles.modalText}>
+              Queremos conhecer melhor você para deixar sua experiência mais personalizada.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={() => {
+                setModalVisible(false);
+                navigation.navigate("completarperfil" as never);
+              }}
+            >
+              <Text style={styles.modalButtonText}>
+                Completar perfil
+              </Text>
+            </TouchableOpacity>
+
+          </Animated.View>
+
+        </View>
+      </Modal>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+
         <View style={styles.header}>
+
           <Image
-            height={50}
-            width={100}
             source={logoApp}
             style={styles.logo}
           />
-          <Text style={styles.inputText}>Criar Conta</Text>
+
+          <Text style={styles.stepText}>
+            Etapa 1 de 2
+          </Text>
+
+          <Text style={styles.inputText}>
+            Comece seu cadastro
+          </Text>
+
         </View>
 
         <View style={styles.main}>
 
           <View style={styles.containerInput}>
             {nome ? <Text style={styles.fieldLabel}>Nome</Text> : null}
+
             <TextInput
               style={styles.input}
               placeholder="Nome"
@@ -183,6 +274,7 @@ export default function Register() {
 
           <View style={styles.containerInput}>
             {login ? <Text style={styles.fieldLabel}>E-mail</Text> : null}
+
             <TextInput
               style={styles.input}
               placeholder="E-mail"
@@ -193,6 +285,7 @@ export default function Register() {
 
           <View style={styles.containerInput}>
             {cpf ? <Text style={styles.fieldLabel}>CPF</Text> : null}
+
             <TextInput
               style={styles.input}
               placeholder="CPF"
@@ -204,10 +297,11 @@ export default function Register() {
           </View>
 
           <View style={styles.containerInput}>
-            {dataNascimento ? <Text style={styles.fieldLabel}>Data de Nascimento</Text> : null}
+            {dataNascimento ? <Text style={styles.fieldLabel}>Data de nascimento</Text> : null}
+
             <TextInput
               style={styles.input}
-              placeholder="Data de Nascimento"
+              placeholder="Data de nascimento"
               onChangeText={(value) => setDataNascimento(formatarData(value))}
               value={dataNascimento}
               keyboardType="numeric"
@@ -218,6 +312,7 @@ export default function Register() {
             {password ? <Text style={styles.fieldLabel}>Senha</Text> : null}
 
             <View style={styles.containerSenha}>
+
               <TextInput
                 style={styles.inputPassword}
                 placeholder="Senha"
@@ -229,7 +324,6 @@ export default function Register() {
 
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
-                style={styles.iconPassword}
               >
                 <Ionicons
                   name={showPassword ? "eye" : "eye-off"}
@@ -237,23 +331,26 @@ export default function Register() {
                   color="#0E457D"
                 />
               </TouchableOpacity>
+
             </View>
           </View>
 
           <View style={styles.containerInput}>
-            {password2 ? <Text style={styles.fieldLabel}>Confirme sua senha</Text> : null}
+            {password2 ? <Text style={styles.fieldLabel}>Confirmar senha</Text> : null}
+
             <View style={styles.containerSenha}>
+
               <TextInput
                 style={styles.inputPassword}
-                placeholder="Confirme sua senha"
+                placeholder="Confirmar senha"
                 onChangeText={setPassword2}
                 value={password2}
                 secureTextEntry={!showConfirmPassword}
                 maxLength={8}
               />
+
               <TouchableOpacity
                 onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={styles.iconPassword}
               >
                 <Ionicons
                   name={showConfirmPassword ? "eye" : "eye-off"}
@@ -261,31 +358,40 @@ export default function Register() {
                   color="#0E457D"
                 />
               </TouchableOpacity>
+
             </View>
           </View>
 
           <TouchableOpacity
             style={[
               styles.button,
-              { backgroundColor: isFormComplete ? "#FF42B3" : "#0E457D" },
+              {
+                backgroundColor: isFormComplete
+                  ? "#FF42B3"
+                  : "#0E457D"
+              },
             ]}
             onPress={onClickRegistrar}
           >
             <Text style={styles.buttonText}>
-              Criar Conta
+              Continuar
             </Text>
           </TouchableOpacity>
 
         </View>
 
         <View style={styles.footer}>
-          <Text>Já tenho conta.</Text>
+
+          <Text>
+            Já tenho conta.
+          </Text>
 
           <Link href="/login">
             <Text style={styles.link}>
               Fazer Login.
             </Text>
           </Link>
+
         </View>
 
       </ScrollView>
@@ -293,64 +399,60 @@ export default function Register() {
   );
 }
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     marginTop: 45,
-    backgroundColor: "#ffffff",
-    paddingLeft: 20,
-    paddingRight: 20,
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
   },
+
   scrollContent: {
     paddingBottom: 20,
   },
+
   header: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
+    alignItems: "center",
     marginTop: 20,
   },
-  main: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    padding: 20,
-    gap: 20,
-  },
-  footer: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 10,
-    paddingBottom: 20,
-    flexDirection: "row",
-    gap: 5,
-  },
+
   logo: {
     width: 200,
     height: 90,
   },
+
+  stepText: {
+    color: "#FF42B3",
+    fontWeight: "700",
+    marginTop: 10,
+  },
+
+  inputText: {
+    fontSize: 30,
+    fontWeight: "bold",
+    color: "#0E457D",
+    marginTop: 10,
+  },
+
+  main: {
+    padding: 20,
+    gap: 20,
+  },
+
   containerInput: {
     width: "100%",
-    padding: 5,
-    borderRadius: 15,
-    paddingLeft: 10,
   },
-  inputText: {
-    fontWeight: "bold",
-    fontSize: 30,
-    color: "#0E457D",
-    padding: 30,
-  },
+
   input: {
-    backgroundColor: '#F1F5F4',
-    width: '100%',
+    backgroundColor: "#F1F5F4",
+    width: "100%",
     height: 60,
     borderRadius: 30,
     fontSize: 16,
-    padding: 20,
+    paddingHorizontal: 20,
   },
+
   fieldLabel: {
     fontSize: 13,
     fontWeight: "600",
@@ -358,40 +460,98 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
     marginLeft: 14,
   },
-  link: {
-    color: "#0E457D",
-    fontWeight: "bold",
-  },
-  button: {
-    marginTop: 45,
-    width: "100%",
-    height: 50,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  buttonText: {
-    color: "#ffffff",
-    fontSize: 20,
-    fontWeight: "bold"
-  },
+
   containerSenha: {
-    backgroundColor: '#F1F5F4',
+    backgroundColor: "#F1F5F4",
     flexDirection: "row",
     alignItems: "center",
-    width: "100%",
     height: 60,
     borderRadius: 30,
-    paddingLeft: 20,
-    paddingRight: 20,
+    paddingHorizontal: 20,
   },
+
   inputPassword: {
     flex: 1,
     fontSize: 16,
   },
-  iconPassword: {
+
+  button: {
+    marginTop: 30,
+    width: "100%",
+    height: 55,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 5,
-  }
+  },
+
+  buttonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 5,
+    marginTop: 10,
+  },
+
+  link: {
+    color: "#0E457D",
+    fontWeight: "bold",
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+
+  modalContainer: {
+    width: "100%",
+    backgroundColor: "#fff",
+    borderRadius: 25,
+    padding: 30,
+    alignItems: "center",
+  },
+
+  modalEmoji: {
+    fontSize: 55,
+  },
+
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#0E457D",
+    marginTop: 15,
+    textAlign: "center",
+  },
+
+  modalText: {
+    fontSize: 16,
+    color: "#555",
+    textAlign: "center",
+    marginTop: 15,
+    lineHeight: 24,
+  },
+
+  modalButton: {
+    backgroundColor: "#FF42B3",
+    width: "100%",
+    height: 55,
+    borderRadius: 16,
+    marginTop: 25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  modalButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+
 });

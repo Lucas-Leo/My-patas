@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+
 import {
   View,
   Text,
@@ -8,7 +9,10 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Switch,
+  TextInput,
+  Modal,
 } from 'react-native';
+
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';
@@ -18,178 +22,644 @@ const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 const ProfileScreen = () => {
+
   const router = useRouter();
+
   const { theme, toggleTheme } = useThemeContext();
+
   const isDark = theme === 'dark';
 
+  const [nome, setNome] = useState("Margarete da Rosa Silva");
+  const [email, setEmail] = useState("margareterosasilva@gmail.com");
+  const [telefone, setTelefone] = useState("(16) 99999-9999");
+  const [cidade, setCidade] = useState("Taquaritinga");
+  const [senha, setSenha] = useState("123456");
+
+  const [editingField, setEditingField] = useState("");
+  const [tempValue, setTempValue] = useState("");
+
+  const [modalVisible, setModalVisible] = useState(false);
+
+  function openEditModal(field: string, currentValue: string) {
+    setEditingField(field);
+    setTempValue(currentValue);
+    setModalVisible(true);
+  }
+
+  function saveEdit() {
+
+    switch (editingField) {
+
+      case "nome":
+        setNome(tempValue);
+        break;
+
+      case "email":
+        setEmail(tempValue);
+        break;
+
+      case "telefone":
+        setTelefone(tempValue);
+        break;
+
+      case "cidade":
+        setCidade(tempValue);
+        break;
+
+      case "senha":
+        setSenha(tempValue);
+        break;
+    }
+
+    setModalVisible(false);
+  }
+
+  function getFieldTitle() {
+
+    switch (editingField) {
+
+      case "nome":
+        return "Editar nome";
+
+      case "email":
+        return "Editar e-mail";
+
+      case "telefone":
+        return "Editar telefone";
+
+      case "cidade":
+        return "Editar cidade";
+
+      case "senha":
+        return "Alterar senha";
+
+      default:
+        return "";
+    }
+  }
+
   return (
+
     <SafeAreaView
       style={[
         styles.safeArea,
-        { backgroundColor: isDark ? '#121212' : '#F5F5F5' },
+        {
+          backgroundColor: isDark
+            ? '#121212'
+            : '#F4F7FB'
+        },
       ]}
     >
+
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+      >
+
+        <View style={styles.modalOverlay}>
+
+          <View
+            style={[
+              styles.modalContainer,
+              {
+                backgroundColor: isDark
+                  ? "#1E1E1E"
+                  : "#FFFFFF"
+              }
+            ]}
+          >
+
+            <Text
+              style={[
+                styles.modalTitle,
+                {
+                  color: isDark
+                    ? "#FFFFFF"
+                    : "#0E457D"
+                }
+              ]}
+            >
+              {getFieldTitle()}
+            </Text>
+
+            <TextInput
+              value={tempValue}
+              onChangeText={setTempValue}
+              style={[
+                styles.modalInput,
+                {
+                  backgroundColor: isDark
+                    ? "#2A2A2A"
+                    : "#F1F5F4",
+
+                  color: isDark
+                    ? "#FFFFFF"
+                    : "#000000"
+                }
+              ]}
+              secureTextEntry={editingField === "senha"}
+            />
+
+            <View style={styles.modalButtons}>
+
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.cancelButtonText}>
+                  Cancelar
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={saveEdit}
+              >
+                <Text style={styles.saveButtonText}>
+                  Salvar
+                </Text>
+              </TouchableOpacity>
+
+            </View>
+
+          </View>
+
+        </View>
+
+      </Modal>
+
       <ScrollView
+        showsVerticalScrollIndicator={false}
         contentContainerStyle={[
           styles.container,
-          { backgroundColor: isDark ? '#1E1E1E' : '#ffffff' },
+          {
+            backgroundColor: isDark
+              ? '#121212'
+              : '#F4F7FB'
+          },
         ]}
       >
 
         <View style={styles.header}>
-           <Image height={50} width={100} source={logoApp} style={styles.logo}  />
+
+          <Image
+            source={logoApp}
+            style={styles.logo}
+          />
+
         </View>
 
-        <View style={styles.photoContainer}>
-          <Image source={profileImage} style={styles.profilePhoto} />
-          <TouchableOpacity style={styles.editPhotoIcon}>
-            <Icon name="square-edit-outline" size={22} color="#000" />
-          </TouchableOpacity>
-        </View>
+        <View
+          style={[
+            styles.profileCard,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
+        >
 
-        <View style={styles.section}>
+          <View style={styles.photoContainer}>
 
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: isDark ? '#E5E5E5' : '#444' }]}>
-              Nome:
-            </Text>
-            <Text
-              style={[
-                styles.value,
-                { color: isDark ? '#FFFFFF' : '#000000' },
-              ]}
-            >
-              Margarete da Rosa Silva
-            </Text>
-            <TouchableOpacity style={styles.editIcon}>
+            <Image
+              source={profileImage}
+              style={styles.profilePhoto}
+            />
+
+            <TouchableOpacity style={styles.editPhotoButton}>
+
               <Icon
-                name="square-edit-outline"
+                name="camera"
                 size={20}
-                color={isDark ? '#FFFFFF' : '#000000'}
+                color="#FFFFFF"
               />
+
             </TouchableOpacity>
+
           </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: isDark ? '#E5E5E5' : '#444' }]}>
-              E-mail:
-            </Text>
-            <Text
-              style={[
-                styles.value,
-                { color: isDark ? '#FFFFFF' : '#000000' },
-              ]}
-            >
-              margareterosasilva@gmail.com
-            </Text>
-            <TouchableOpacity style={styles.editIcon}>
-              <Icon
-                name="square-edit-outline"
-                size={20}
-                color={isDark ? '#FFFFFF' : '#000000'}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: isDark ? '#E5E5E5' : '#444' }]}>
-              Senha:
-            </Text>
-            <Text
-              style={[
-                styles.value,
-                { color: isDark ? '#FFFFFF' : '#000000' },
-              ]}
-            >
-              *********
-            </Text>
-            <TouchableOpacity style={styles.editIcon}>
-              <Icon
-                name="square-edit-outline"
-                size={20}
-                color={isDark ? '#FFFFFF' : '#000000'}
-              />
-            </TouchableOpacity>
-          </View>
-
-          <TouchableOpacity
+          <Text
             style={[
-              styles.deleteButton,
-              { backgroundColor: isDark ? '#E53935' : '#FF3B3B' },
+              styles.profileName,
+              {
+                color: isDark
+                  ? "#FFFFFF"
+                  : "#0E457D"
+              }
             ]}
           >
-            <Text style={styles.deleteButtonText}>Excluir conta</Text>
-          </TouchableOpacity>
+            {nome}
+          </Text>
+
+          <Text
+            style={[
+              styles.profileEmail,
+              {
+                color: isDark
+                  ? "#BBBBBB"
+                  : "#666666"
+              }
+            ]}
+          >
+            {email}
+          </Text>
+
         </View>
 
-        <View style={styles.extraSection}>
-          <TouchableOpacity style={styles.extraItem} onPress={() => router.push("/quests")}>
-            <Icon
-              name="help-circle-outline"
-              size={24}
-              color={isDark ? '#E5E5E5' : '#333'}
-            />
-            <Text
-              style={[
-                styles.extraText,
-                { color: isDark ? '#E5E5E5' : '#333' },
-              ]}
+        <View
+          style={[
+            styles.infoCard,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
+        >
+
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: isDark
+                  ? "#FFFFFF"
+                  : "#0E457D"
+              }
+            ]}
+          >
+            Informações pessoais
+          </Text>
+
+          <View style={styles.fieldItem}>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  {
+                    color: isDark
+                      ? "#BDBDBD"
+                      : "#666"
+                  }
+                ]}
+              >
+                Nome
+              </Text>
+
+              <Text
+                style={[
+                  styles.fieldValue,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                {nome}
+              </Text>
+
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openEditModal("nome", nome)}
             >
-              Perguntas
-            </Text>
+
+              <Icon
+                name="square-edit-outline"
+                size={22}
+                color="#FF42B3"
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.fieldItem}>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  {
+                    color: isDark
+                      ? "#BDBDBD"
+                      : "#666"
+                  }
+                ]}
+              >
+                E-mail
+              </Text>
+
+              <Text
+                style={[
+                  styles.fieldValue,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                {email}
+              </Text>
+
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openEditModal("email", email)}
+            >
+
+              <Icon
+                name="square-edit-outline"
+                size={22}
+                color="#FF42B3"
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.fieldItem}>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  {
+                    color: isDark
+                      ? "#BDBDBD"
+                      : "#666"
+                  }
+                ]}
+              >
+                Telefone
+              </Text>
+
+              <Text
+                style={[
+                  styles.fieldValue,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                {telefone}
+              </Text>
+
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openEditModal("telefone", telefone)}
+            >
+
+              <Icon
+                name="square-edit-outline"
+                size={22}
+                color="#FF42B3"
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.fieldItem}>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  {
+                    color: isDark
+                      ? "#BDBDBD"
+                      : "#666"
+                  }
+                ]}
+              >
+                Cidade
+              </Text>
+
+              <Text
+                style={[
+                  styles.fieldValue,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                {cidade}
+              </Text>
+
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openEditModal("cidade", cidade)}
+            >
+
+              <Icon
+                name="square-edit-outline"
+                size={22}
+                color="#FF42B3"
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.fieldItem}>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fieldLabel,
+                  {
+                    color: isDark
+                      ? "#BDBDBD"
+                      : "#666"
+                  }
+                ]}
+              >
+                Senha
+              </Text>
+
+              <Text
+                style={[
+                  styles.fieldValue,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                ••••••••••
+              </Text>
+
+            </View>
+
+            <TouchableOpacity
+              onPress={() => openEditModal("senha", senha)}
+            >
+
+              <Icon
+                name="square-edit-outline"
+                size={22}
+                color="#FF42B3"
+              />
+
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
+        <View
+          style={[
+            styles.settingsCard,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
+        >
+
+          <TouchableOpacity
+            style={styles.settingItem}
+            onPress={() => router.push("/quests")}
+          >
+
+            <View style={styles.settingLeft}>
+
+              <Icon
+                name="help-circle-outline"
+                size={24}
+                color="#FF42B3"
+              />
+
+              <Text
+                style={[
+                  styles.settingText,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                Perguntas frequentes
+              </Text>
+
+            </View>
+
+            <Icon
+              name="chevron-right"
+              size={24}
+              color="#999"
+            />
+
           </TouchableOpacity>
 
-          <View style={styles.extraItem}>
-            <Icon
-              name={isDark ? 'weather-night' : 'weather-sunny'}
-              size={24}
-              color={isDark ? '#FFD54F' : '#333'}
-            />
-            <Text
-              style={[
-                styles.extraText,
-                { color: isDark ? '#E5E5E5' : '#333' },
-              ]}
-            >
-              Modo escuro
-            </Text>
-            <View style={{ flex: 1 }} />
+          <View style={styles.divider} />
+
+          <View style={styles.settingItem}>
+
+            <View style={styles.settingLeft}>
+
+              <Icon
+                name={isDark ? 'weather-night' : 'weather-sunny'}
+                size={24}
+                color="#FF42B3"
+              />
+
+              <Text
+                style={[
+                  styles.settingText,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#000000"
+                  }
+                ]}
+              >
+                Modo escuro
+              </Text>
+
+            </View>
+
             <Switch
               value={isDark}
               onValueChange={toggleTheme}
               thumbColor="#FFFFFF"
-              trackColor={{ false: '#B0BEC5', true: '#4CAF50' }}
+              trackColor={{
+                false: '#B0BEC5',
+                true: '#FF42B3'
+              }}
             />
+
           </View>
+
         </View>
 
+        <TouchableOpacity style={styles.deleteButton}>
+
+          <Icon
+            name="delete-outline"
+            size={20}
+            color="#FFFFFF"
+          />
+
+          <Text style={styles.deleteButtonText}>
+            Excluir conta
+          </Text>
+
+        </TouchableOpacity>
+
       </ScrollView>
-      <BottomNav isDark={isDark} activePage="perfil" />
+
+      <BottomNav
+        isDark={isDark}
+        activePage="perfil"
+      />
+
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+
   safeArea: {
     flex: 1,
-    backgroundColor: "#F5F5F5",
   },
 
   container: {
-    flex: 1,
-    marginTop: 45,
-    backgroundColor: "#ffffff",
+    paddingBottom: 140,
     alignItems: "center",
   },
 
   header: {
-    alignItems: "center",
     marginTop: 40,
     marginBottom: 10,
+    alignItems: "center",
   },
 
   logo: {
@@ -197,86 +667,202 @@ const styles = StyleSheet.create({
     height: 90,
   },
 
-  photoContainer: {
-    marginTop: 10,
+  profileCard: {
+    width: "90%",
+    borderRadius: 28,
     alignItems: "center",
+    paddingVertical: 30,
+    marginTop: 15,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  photoContainer: {
+    position: "relative",
   },
 
   profilePhoto: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 130,
+    height: 130,
+    borderRadius: 65,
+    borderWidth: 4,
+    borderColor: "#FF42B3",
   },
 
-  editPhotoIcon: {
+  editPhotoButton: {
     position: "absolute",
-    right: 1,
-    bottom: 5,
-  },
-
-  section: {
-    width: "85%",
-    marginTop: 25,
-  },
-
-  field: {
-    marginBottom: 5,
-  },
-
-  label: {
-    fontSize: 15,
-    fontWeight: "bold",
-    color: "#444",
-  },
-
-  value: {
-    fontSize: 15,
-    marginTop: 4,
-    paddingRight: 30,
-  },
-
-  editIcon: {
-    position: "absolute",
+    bottom: 0,
     right: 0,
-    top: 22,
+    backgroundColor: "#FF42B3",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  profileName: {
+    marginTop: 18,
+    fontSize: 24,
+    fontWeight: "bold",
+  },
+
+  profileEmail: {
+    marginTop: 5,
+    fontSize: 15,
+  },
+
+  infoCard: {
+    width: "90%",
+    borderRadius: 28,
+    marginTop: 25,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 25,
+  },
+
+  fieldItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  fieldLabel: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 
   divider: {
     width: "100%",
     height: 1,
-    backgroundColor: "#ccc",
-    marginVertical: 12,
+    backgroundColor: "#EAEAEA",
+    marginVertical: 18,
   },
 
-  deleteButton: {
-    backgroundColor: "#FF3B3B",
-    paddingVertical: 12,
-    borderRadius: 10,
+  settingsCard: {
+    width: "90%",
+    borderRadius: 28,
     marginTop: 20,
+    padding: 24,
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  settingItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
   },
 
+  settingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+
+  settingText: {
+    fontSize: 16,
+    marginLeft: 12,
+    fontWeight: "500",
+  },
+
+  deleteButton: {
+    width: "90%",
+    height: 58,
+    backgroundColor: "#FF3B3B",
+    borderRadius: 18,
+    marginTop: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+
   deleteButtonText: {
-    color: "#fff",
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+
+  modalContainer: {
+    width: "100%",
+    borderRadius: 25,
+    padding: 25,
+  },
+
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+
+  modalInput: {
+    width: "100%",
+    height: 55,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    fontSize: 16,
+  },
+
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 25,
+  },
+
+  cancelButton: {
+    width: "48%",
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "#D9D9D9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cancelButtonText: {
+    color: "#333",
     fontWeight: "bold",
     fontSize: 15,
   },
 
-  extraSection: {
-    width: "85%",
-    marginTop: 35,
-  },
-
-  extraItem: {
-    flexDirection: "row",
+  saveButton: {
+    width: "48%",
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: "#FF42B3",
     alignItems: "center",
-    paddingVertical: 12,
+    justifyContent: "center",
   },
 
-  extraText: {
-    marginLeft: 10,
-    fontSize: 16,
-    color: "#333",
+  saveButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 15,
   },
 
 });
