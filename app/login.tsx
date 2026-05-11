@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-
+import api from "../backend/models/api"
 import axios, { AxiosError } from "axios";
 import { Link, useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
@@ -25,56 +25,56 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
 
   // Tipo da resposta do backend
-type LoginResponse = {
-  mensagem?: string;
-  erro?: string;
-  token?: string;
-  usuario?: {
-    id: number;
-    nome: string;
-    email: string;
-    telefone: string | null;
-    data_nasc: string;
-    cpf: string;
-    foto: string | null;
-    fk_idsexo: number | null;
-    fk_idendereco: number | null;
-    fk_idtipo: number;
-    data_criacao: string;
-    data_att: string;
+  type LoginResponse = {
+    mensagem?: string;
+    erro?: string;
+    token?: string;
+    usuario?: {
+      id: number;
+      nome: string;
+      email: string;
+      telefone: string | null;
+      data_nasc: string;
+      cpf: string;
+      foto: string | null;
+      fk_idsexo: number | null;
+      fk_idendereco: number | null;
+      fk_idtipo: number;
+      data_criacao: string;
+      data_att: string;
+    };
   };
-};
 
-async function loginUsuario(): Promise<LoginResponse> {
-  try {
-    console.log("Iniciando login...");
+  async function loginUsuario(): Promise<LoginResponse> {
+    try {
+      console.log("Iniciando login...");
 
-    const res = await axios.post<LoginResponse>(
-      "http://192.168.15.8:6788/login",
-      {
-        email: login,
-        senha: password,
-      }
-    );
+      const res = await api.post<LoginResponse>(
+        "/login",
+        {
+          email: login,
+          senha: password,
+        }
+      );
 
-    console.log("Login concluído com sucesso.");
-    console.log("Status HTTP:", res.status);
-    console.log("Resposta do servidor:", res.data);
+      console.log("Login concluído com sucesso.");
+      console.log("Status HTTP:", res.status);
+      console.log("Resposta do servidor:", res.data);
 
-    return res.data;
-  } catch (error) {
-    const err = error as AxiosError<LoginResponse>;
+      return res.data;
+    } catch (error) {
+      const err = error as AxiosError<LoginResponse>;
 
-    console.log("=== ERRO NO LOGIN ===");
-    console.log("Mensagem:", err.message);
-    console.log("Código:", err.code);
-    console.log("Status HTTP:", err.response?.status);
-    console.log("Resposta do servidor:", err.response?.data);
-    console.log("=====================");
+      console.log("=== ERRO NO LOGIN ===");
+      console.log("Mensagem:", err.message);
+      console.log("Código:", err.code);
+      console.log("Status HTTP:", err.response?.status);
+      console.log("Resposta do servidor:", err.response?.data);
+      console.log("=====================");
 
-    throw err;
+      throw err;
+    }
   }
-}
 
   function validateEmail(email: string) {
     return /\S+@\S+\.\S+/.test(email);

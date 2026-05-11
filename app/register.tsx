@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-
+import api from "../backend/models/api";
 import axios, { AxiosError } from "axios";
 import { Link, useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
@@ -39,8 +39,8 @@ export default function Register() {
 
   async function criarConta(): Promise<UsuarioResponse> {
     try {
-      const res = await axios.post<UsuarioResponse>(
-        "http://192.168.14.214:6788/usuarios",
+      const res = await api.post<UsuarioResponse>(
+        "/usuarios",
         {
           nome,
           email: login,
