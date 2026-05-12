@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import {
   View,
@@ -11,6 +11,7 @@ import {
   Switch,
   TextInput,
   Modal,
+  Animated,
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -50,11 +51,49 @@ const ProfileScreen = () => {
 
   const [modalVisible, setModalVisible] = useState(false);
 
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+
+  const [feedbackTitle, setFeedbackTitle] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [feedbackEmoji, setFeedbackEmoji] = useState("🐾");
+
+  const [feedbackAction, setFeedbackAction] = useState<
+    "save" | "logout" | "delete" | "deleted" | null
+  >(null);
+
+  const scaleAnim = useRef(new Animated.Value(0.7)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     carregarUsuario();
   }, []);
 
+  useEffect(() => {
+
+    if (feedbackVisible) {
+
+      scaleAnim.setValue(0.7);
+      opacityAnim.setValue(0);
+
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+
+      ]).start();
+    }
+
+  }, [feedbackVisible]);
+
   async function carregarUsuario() {
+
     const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
     if (!usuarioSalvo) {
@@ -70,12 +109,14 @@ const ProfileScreen = () => {
   }
 
   function openEditModal(field: string, currentValue: string) {
+
     setEditingField(field);
     setTempValue(currentValue);
     setModalVisible(true);
   }
 
   async function atualizarUsuarioSalvo(field: string, value: string) {
+
     const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
     if (!usuarioSalvo || field === "senha") {
@@ -85,15 +126,20 @@ const ProfileScreen = () => {
     const usuario = JSON.parse(usuarioSalvo);
 
     if (field === "cidade") {
+
       usuario.endereco = {
         ...usuario.endereco,
         cidade: value,
       };
+
     } else {
       usuario[field] = value;
     }
 
-    await AsyncStorage.setItem("usuario", JSON.stringify(usuario));
+    await AsyncStorage.setItem(
+      "usuario",
+      JSON.stringify(usuario)
+    );
   }
 
   async function saveEdit() {
@@ -121,13 +167,92 @@ const ProfileScreen = () => {
         break;
     }
 
-    await atualizarUsuarioSalvo(editingField, tempValue);
+    await atualizarUsuarioSalvo(
+      editingField,
+      tempValue
+    );
+
     setModalVisible(false);
+
+    setFeedbackEmoji("✅");
+
+    setFeedbackTitle(
+      "Alterações salvas"
+    );
+
+    setFeedbackMessage(
+      "Suas informações foram atualizadas com sucesso."
+    );
+
+    setFeedbackAction("save");
+
+    setFeedbackVisible(true);
   }
 
   async function logout() {
-    await AsyncStorage.multiRemove(["usuario", "token", "ong"]);
+
+    setFeedbackEmoji("👋");
+
+    setFeedbackTitle(
+      "Até logo!"
+    );
+
+    setFeedbackMessage(
+      "Você saiu da sua conta com sucesso."
+    );
+
+    setFeedbackAction("logout");
+
+    setFeedbackVisible(true);
+  }
+
+  async function confirmarLogout() {
+
+    await AsyncStorage.multiRemove([
+      "usuario",
+      "token",
+      "ong"
+    ]);
+
     router.replace("/login");
+  }
+
+  function excluirConta() {
+
+    setFeedbackEmoji("⚠️");
+
+    setFeedbackTitle(
+      "Excluir conta"
+    );
+
+    setFeedbackMessage(
+      "Tem certeza que deseja excluir sua conta? Essa ação não poderá ser desfeita."
+    );
+
+    setFeedbackAction("delete");
+
+    setFeedbackVisible(true);
+  }
+
+  async function confirmarExclusao() {
+
+    await AsyncStorage.multiRemove([
+      "usuario",
+      "token",
+      "ong"
+    ]);
+
+    setFeedbackEmoji("🗑️");
+
+    setFeedbackTitle(
+      "Conta excluída"
+    );
+
+    setFeedbackMessage(
+      "Sua conta foi excluída com sucesso."
+    );
+
+    setFeedbackAction("deleted");
   }
 
   function getFieldTitle() {
@@ -245,6 +370,114 @@ const ProfileScreen = () => {
 
       </Modal>
 
+      <Modal
+        transparent
+        animationType="fade"
+        visible={feedbackVisible}
+      >
+
+        <View style={styles.modalOverlay}>
+
+          <Animated.View
+            style={[
+              styles.feedbackContainer,
+              {
+                backgroundColor: isDark
+                  ? "#1E1E1E"
+                  : "#FFFFFF",
+
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}
+          >
+
+            <Text style={styles.feedbackEmoji}>
+              {feedbackEmoji}
+            </Text>
+
+            <Text
+              style={[
+                styles.feedbackTitle,
+                {
+                  color: isDark
+                    ? "#FFFFFF"
+                    : "#0E457D"
+                }
+              ]}
+            >
+              {feedbackTitle}
+            </Text>
+
+            <Text
+              style={[
+                styles.feedbackMessage,
+                {
+                  color: isDark
+                    ? "#CCCCCC"
+                    : "#555555"
+                }
+              ]}
+            >
+              {feedbackMessage}
+            </Text>
+
+            {
+              feedbackAction === "delete"
+                ? (
+                  <View style={styles.feedbackButtons}>
+
+                    <TouchableOpacity
+                      style={styles.cancelDeleteButton}
+                      onPress={() =>
+                        setFeedbackVisible(false)
+                      }
+                    >
+                      <Text style={styles.cancelDeleteText}>
+                        Cancelar
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.confirmDeleteButton}
+                      onPress={confirmarExclusao}
+                    >
+                      <Text style={styles.confirmDeleteText}>
+                        Excluir
+                      </Text>
+                    </TouchableOpacity>
+
+                  </View>
+                )
+                : (
+                  <TouchableOpacity
+                    style={styles.feedbackButton}
+                    onPress={async () => {
+
+                      setFeedbackVisible(false);
+
+                      if (feedbackAction === "logout") {
+                        await confirmarLogout();
+                      }
+
+                      if (feedbackAction === "deleted") {
+                        router.replace("/login");
+                      }
+                    }}
+                  >
+                    <Text style={styles.feedbackButtonText}>
+                      Entendi
+                    </Text>
+                  </TouchableOpacity>
+                )
+            }
+
+          </Animated.View>
+
+        </View>
+
+      </Modal>
+
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[
@@ -348,243 +581,72 @@ const ProfileScreen = () => {
             Informações pessoais
           </Text>
 
-          <View style={styles.fieldItem}>
+          {[
+            { label: "Nome", value: nome, field: "nome" },
+            { label: "E-mail", value: email, field: "email" },
+            { label: "Telefone", value: telefone, field: "telefone" },
+            { label: "Cidade", value: cidade, field: "cidade" },
+            { label: "Senha", value: "••••••••••", field: "senha" },
+          ].map((item, index) => (
 
-            <View>
+            <View key={index}>
 
-              <Text
-                style={[
-                  styles.fieldLabel,
-                  {
-                    color: isDark
-                      ? "#BDBDBD"
-                      : "#666"
+              <View style={styles.fieldItem}>
+
+                <View>
+
+                  <Text
+                    style={[
+                      styles.fieldLabel,
+                      {
+                        color: isDark
+                          ? "#BDBDBD"
+                          : "#666"
+                      }
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+
+                  <Text
+                    style={[
+                      styles.fieldValue,
+                      {
+                        color: isDark
+                          ? "#FFFFFF"
+                          : "#000000"
+                      }
+                    ]}
+                  >
+                    {item.value}
+                  </Text>
+
+                </View>
+
+                <TouchableOpacity
+                  onPress={() =>
+                    openEditModal(item.field, item.value)
                   }
-                ]}
-              >
-                Nome
-              </Text>
+                >
 
-              <Text
-                style={[
-                  styles.fieldValue,
-                  {
-                    color: isDark
-                      ? "#FFFFFF"
-                      : "#000000"
-                  }
-                ]}
-              >
-                {nome}
-              </Text>
+                  <Icon
+                    name="square-edit-outline"
+                    size={22}
+                    color="#FF42B3"
+                  />
+
+                </TouchableOpacity>
+
+              </View>
+
+              {
+                index !== 4 &&
+                <View style={styles.divider} />
+              }
 
             </View>
 
-            <TouchableOpacity
-              onPress={() => openEditModal("nome", nome)}
-            >
-
-              <Icon
-                name="square-edit-outline"
-                size={22}
-                color="#FF42B3"
-              />
-
-            </TouchableOpacity>
-
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.fieldItem}>
-
-            <View>
-
-              <Text
-                style={[
-                  styles.fieldLabel,
-                  {
-                    color: isDark
-                      ? "#BDBDBD"
-                      : "#666"
-                  }
-                ]}
-              >
-                E-mail
-              </Text>
-
-              <Text
-                style={[
-                  styles.fieldValue,
-                  {
-                    color: isDark
-                      ? "#FFFFFF"
-                      : "#000000"
-                  }
-                ]}
-              >
-                {email}
-              </Text>
-
-            </View>
-
-            <TouchableOpacity
-              onPress={() => openEditModal("email", email)}
-            >
-
-              <Icon
-                name="square-edit-outline"
-                size={22}
-                color="#FF42B3"
-              />
-
-            </TouchableOpacity>
-
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.fieldItem}>
-
-            <View>
-
-              <Text
-                style={[
-                  styles.fieldLabel,
-                  {
-                    color: isDark
-                      ? "#BDBDBD"
-                      : "#666"
-                  }
-                ]}
-              >
-                Telefone
-              </Text>
-
-              <Text
-                style={[
-                  styles.fieldValue,
-                  {
-                    color: isDark
-                      ? "#FFFFFF"
-                      : "#000000"
-                  }
-                ]}
-              >
-                {telefone}
-              </Text>
-
-            </View>
-
-            <TouchableOpacity
-              onPress={() => openEditModal("telefone", telefone)}
-            >
-
-              <Icon
-                name="square-edit-outline"
-                size={22}
-                color="#FF42B3"
-              />
-
-            </TouchableOpacity>
-
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.fieldItem}>
-
-            <View>
-
-              <Text
-                style={[
-                  styles.fieldLabel,
-                  {
-                    color: isDark
-                      ? "#BDBDBD"
-                      : "#666"
-                  }
-                ]}
-              >
-                Cidade
-              </Text>
-
-              <Text
-                style={[
-                  styles.fieldValue,
-                  {
-                    color: isDark
-                      ? "#FFFFFF"
-                      : "#000000"
-                  }
-                ]}
-              >
-                {cidade}
-              </Text>
-
-            </View>
-
-            <TouchableOpacity
-              onPress={() => openEditModal("cidade", cidade)}
-            >
-
-              <Icon
-                name="square-edit-outline"
-                size={22}
-                color="#FF42B3"
-              />
-
-            </TouchableOpacity>
-
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.fieldItem}>
-
-            <View>
-
-              <Text
-                style={[
-                  styles.fieldLabel,
-                  {
-                    color: isDark
-                      ? "#BDBDBD"
-                      : "#666"
-                  }
-                ]}
-              >
-                Senha
-              </Text>
-
-              <Text
-                style={[
-                  styles.fieldValue,
-                  {
-                    color: isDark
-                      ? "#FFFFFF"
-                      : "#000000"
-                  }
-                ]}
-              >
-                ••••••••••
-              </Text>
-
-            </View>
-
-            <TouchableOpacity
-              onPress={() => openEditModal("senha", senha)}
-            >
-
-              <Icon
-                name="square-edit-outline"
-                size={22}
-                color="#FF42B3"
-              />
-
-            </TouchableOpacity>
-
-          </View>
+          ))}
 
         </View>
 
@@ -642,7 +704,9 @@ const ProfileScreen = () => {
             <View style={styles.settingLeft}>
 
               <Icon
-                name={isDark ? 'weather-night' : 'weather-sunny'}
+                name={isDark
+                  ? 'weather-night'
+                  : 'weather-sunny'}
                 size={24}
                 color="#FF42B3"
               />
@@ -693,7 +757,10 @@ const ProfileScreen = () => {
 
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.deleteButton}>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={excluirConta}
+        >
 
           <Icon
             name="delete-outline"
@@ -948,6 +1015,84 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "bold",
     fontSize: 15,
+  },
+
+  feedbackContainer: {
+    width: "100%",
+    borderRadius: 25,
+    padding: 30,
+    alignItems: "center",
+  },
+
+  feedbackEmoji: {
+    fontSize: 55,
+  },
+
+  feedbackTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 15,
+    textAlign: "center",
+  },
+
+  feedbackMessage: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 15,
+    lineHeight: 24,
+  },
+
+  feedbackButton: {
+    backgroundColor: "#FF42B3",
+    width: "100%",
+    height: 55,
+    borderRadius: 16,
+    marginTop: 25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  feedbackButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+
+  feedbackButtons: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 25,
+  },
+
+  cancelDeleteButton: {
+    width: "48%",
+    height: 55,
+    borderRadius: 16,
+    backgroundColor: "#D9D9D9",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  confirmDeleteButton: {
+    width: "48%",
+    height: 55,
+    borderRadius: 16,
+    backgroundColor: "#FF3B3B",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  cancelDeleteText: {
+    color: "#333333",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+
+  confirmDeleteText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 
 });

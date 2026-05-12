@@ -64,6 +64,11 @@ export default function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalErrorVisible, setModalErrorVisible] = useState(false);
+
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+  const [modalEmoji, setModalEmoji] = useState("🐾");
 
   const scaleAnim = useRef(new Animated.Value(0.7)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -109,18 +114,21 @@ export default function Register() {
       cidade: marcador,
       fk_idestado: idEstado,
     });
+
     const idCidade = extrairId(cidade.data, "a cidade pendente");
 
     const bairro = await api.post<IdResponse>("/bairros", {
       bairro: marcador,
       fk_idcidade: idCidade,
     });
+
     const idBairro = extrairId(bairro.data, "o bairro pendente");
 
     const rua = await api.post<IdResponse>("/ruas", {
       rua: marcador,
       fk_idbairro: idBairro,
     });
+
     const idRua = extrairId(rua.data, "a rua pendente");
 
     const endereco = await api.post<IdResponse>("/enderecos", {
@@ -132,6 +140,7 @@ export default function Register() {
       cep: "00000-000",
       complemento: "Cadastro pendente",
     });
+
     const idEndereco = extrairId(endereco.data, "o endereco pendente");
 
     return idEndereco;
@@ -139,12 +148,15 @@ export default function Register() {
 
   function formatarDataParaApi(data: string) {
     const [dia, mes, ano] = data.split("/");
+
     return `${ano}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
   }
 
   async function criarConta(): Promise<Usuario> {
     try {
+
       const cpfLimpo = cpf.replace(/\D/g, "");
+
       const fkIdEndereco = await criarEnderecoPendente(cpfLimpo);
 
       const res = await api.post<RegisterResponse>("/usuarios", {
@@ -159,10 +171,13 @@ export default function Register() {
         fk_idendereco: fkIdEndereco,
         fk_idtipo: ID_TIPO_USUARIO_PADRAO,
       });
+
       console.log("RESPOSTA DO BACKEND:", res.data);
 
       if (res.data.success === false || !res.data.data) {
-        throw new Error(res.data.message || "Nao foi possivel criar a conta.");
+        throw new Error(
+          res.data.message || "Nao foi possivel criar a conta."
+        );
       }
 
       return {
@@ -170,8 +185,11 @@ export default function Register() {
         fk_idendereco: fkIdEndereco,
         fk_idtipo: ID_TIPO_USUARIO_PADRAO,
       };
+
     } catch (error) {
+
       console.log(obterMensagemErro(error));
+
       throw error;
     }
   }
@@ -179,26 +197,35 @@ export default function Register() {
   const navigation = useNavigation();
 
   useEffect(() => {
-    if (modalVisible) {
+
+    if (modalVisible || modalErrorVisible) {
+
+      scaleAnim.setValue(0.7);
+      opacityAnim.setValue(0);
+
       Animated.parallel([
         Animated.spring(scaleAnim, {
           toValue: 1,
           useNativeDriver: true,
         }),
+
         Animated.timing(opacityAnim, {
           toValue: 1,
           duration: 250,
           useNativeDriver: true,
         }),
+
       ]).start();
     }
-  }, [modalVisible]);
+
+  }, [modalVisible, modalErrorVisible]);
 
   function validarEmail(email: string) {
     return /\S+@\S+\.\S+/.test(email);
   }
 
   function formatarCPF(valor: string) {
+
     let v = valor.replace(/\D/g, "").slice(0, 11);
 
     v = v.replace(/(\d{3})(\d)/, "$1.$2");
@@ -209,6 +236,7 @@ export default function Register() {
   }
 
   function validarCPF(cpf: string) {
+
     const clean = cpf.replace(/\D/g, "");
 
     if (clean.length !== 11 || /^(\d)\1+$/.test(clean)) {
@@ -243,6 +271,7 @@ export default function Register() {
   }
 
   function formatarData(valor: string) {
+
     let v = valor.replace(/\D/g, "").slice(0, 8);
 
     v = v.replace(/(\d{2})(\d)/, "$1/$2");
@@ -252,6 +281,7 @@ export default function Register() {
   }
 
   function validarData(data: string) {
+
     const [dia, mes, ano] = data.split("/").map(Number);
 
     const date = new Date(ano, mes - 1, dia);
@@ -264,6 +294,7 @@ export default function Register() {
   }
 
   function calcularIdade(data: string) {
+
     const [dia, mes, ano] = data.split("/").map(Number);
 
     const nascimento = new Date(ano, mes - 1, dia);
@@ -274,7 +305,10 @@ export default function Register() {
 
     const m = hoje.getMonth() - nascimento.getMonth();
 
-    if (m < 0 || (m === 0 && hoje.getDate() < nascimento.getDate())) {
+    if (
+      m < 0 ||
+      (m === 0 && hoje.getDate() < nascimento.getDate())
+    ) {
       idade--;
     }
 
@@ -288,36 +322,94 @@ export default function Register() {
     }
 
     if (!validarEmail(login)) {
+
+      setModalEmoji("⚠️");
+
+      setModalTitle(
+        "E-mail inválido"
+      );
+
+      setModalMessage(
+        "Digite um endereço de e-mail válido para continuar."
+      );
+
+      setModalErrorVisible(true);
+
       return;
     }
 
-    // if (!validarCPF(cpf)) {
-    //   return;
-    // }
-
-    // if (CPFsCadastrados.includes(cpf.replace(/\D/g, ""))) {
-    //   return;
-    // }
-
     if (!validarData(dataNascimento)) {
+
+      setModalEmoji("⚠️");
+
+      setModalTitle(
+        "Data inválida"
+      );
+
+      setModalMessage(
+        "Digite uma data de nascimento válida."
+      );
+
+      setModalErrorVisible(true);
+
       return;
     }
 
     const idade = calcularIdade(dataNascimento);
 
     if (idade < 18) {
+
+      setModalEmoji("⚠️");
+
+      setModalTitle(
+        "Ops! Você ainda não pode criar uma conta"
+      );
+
+      setModalMessage(
+        "Você precisa ter pelo menos 18 anos para criar uma conta no Patas Conscientes."
+      );
+
+      setModalErrorVisible(true);
+
       return;
     }
 
     if (password !== password2) {
+
+      setModalEmoji("⚠️");
+
+      setModalTitle(
+        "Senhas diferentes"
+      );
+
+      setModalMessage(
+        "As senhas digitadas não coincidem."
+      );
+
+      setModalErrorVisible(true);
+
       return;
     }
 
     if (password.length < 4) {
+
+      setModalEmoji("⚠️");
+
+      setModalTitle(
+        "Senha muito curta"
+      );
+
+      setModalMessage(
+        "Sua senha precisa ter pelo menos 4 caracteres."
+      );
+
+      setModalErrorVisible(true);
+
       return;
     }
 
     try {
+
       const usuario = await criarConta();
 
       await AsyncStorage.setItem(
@@ -325,20 +417,41 @@ export default function Register() {
         JSON.stringify(usuario)
       );
 
+      setModalEmoji("🐾");
+
+      setModalTitle(
+        "Falta só mais um passo"
+      );
+
+      setModalMessage(
+        "Queremos conhecer melhor você para deixar sua experiência mais personalizada."
+      );
+
       setModalVisible(true);
+
     } catch (error) {
-      Alert.alert(
-        "Erro",
+
+      setModalEmoji("⚠️");
+
+      setModalTitle(
+        "Erro ao criar conta"
+      );
+
+      setModalMessage(
         obterMensagemErro(error)
       );
+
+      setModalErrorVisible(true);
     }
-  } return (
+  }
+
+  return (
     <View style={styles.container}>
 
       <Modal
         transparent
         animationType="fade"
-        visible={modalVisible}
+        visible={modalVisible || modalErrorVisible}
       >
         <View style={styles.overlay}>
 
@@ -353,26 +466,35 @@ export default function Register() {
           >
 
             <Text style={styles.modalEmoji}>
-              🐾
+              {modalEmoji}
             </Text>
 
             <Text style={styles.modalTitle}>
-              Falta só mais um passo
+              {modalTitle}
             </Text>
 
             <Text style={styles.modalText}>
-              Queremos conhecer melhor você para deixar sua experiência mais personalizada.
+              {modalMessage}
             </Text>
 
             <TouchableOpacity
               style={styles.modalButton}
               onPress={() => {
+
+                if (modalErrorVisible) {
+                  setModalErrorVisible(false);
+                  return;
+                }
+
                 setModalVisible(false);
+
                 navigation.navigate("completarperfil" as never);
               }}
             >
               <Text style={styles.modalButtonText}>
-                Completar perfil
+                {modalErrorVisible
+                  ? "Entendi"
+                  : "Completar perfil"}
               </Text>
             </TouchableOpacity>
 
@@ -406,7 +528,9 @@ export default function Register() {
         <View style={styles.main}>
 
           <View style={styles.containerInput}>
-            {nome ? <Text style={styles.fieldLabel}>Nome</Text> : null}
+            {nome
+              ? <Text style={styles.fieldLabel}>Nome</Text>
+              : null}
 
             <TextInput
               style={styles.input}
@@ -417,7 +541,9 @@ export default function Register() {
           </View>
 
           <View style={styles.containerInput}>
-            {login ? <Text style={styles.fieldLabel}>E-mail</Text> : null}
+            {login
+              ? <Text style={styles.fieldLabel}>E-mail</Text>
+              : null}
 
             <TextInput
               style={styles.input}
@@ -428,12 +554,16 @@ export default function Register() {
           </View>
 
           <View style={styles.containerInput}>
-            {cpf ? <Text style={styles.fieldLabel}>CPF</Text> : null}
+            {cpf
+              ? <Text style={styles.fieldLabel}>CPF</Text>
+              : null}
 
             <TextInput
               style={styles.input}
               placeholder="CPF"
-              onChangeText={(value) => setCpf(formatarCPF(value))}
+              onChangeText={(value) =>
+                setCpf(formatarCPF(value))
+              }
               value={cpf}
               keyboardType="numeric"
               maxLength={14}
@@ -441,19 +571,25 @@ export default function Register() {
           </View>
 
           <View style={styles.containerInput}>
-            {dataNascimento ? <Text style={styles.fieldLabel}>Data de nascimento</Text> : null}
+            {dataNascimento
+              ? <Text style={styles.fieldLabel}>Data de nascimento</Text>
+              : null}
 
             <TextInput
               style={styles.input}
               placeholder="Data de nascimento"
-              onChangeText={(value) => setDataNascimento(formatarData(value))}
+              onChangeText={(value) =>
+                setDataNascimento(formatarData(value))
+              }
               value={dataNascimento}
               keyboardType="numeric"
             />
           </View>
 
           <View style={styles.containerInput}>
-            {password ? <Text style={styles.fieldLabel}>Senha</Text> : null}
+            {password
+              ? <Text style={styles.fieldLabel}>Senha</Text>
+              : null}
 
             <View style={styles.containerSenha}>
 
@@ -467,10 +603,14 @@ export default function Register() {
               />
 
               <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
+                onPress={() =>
+                  setShowPassword(!showPassword)
+                }
               >
                 <Ionicons
-                  name={showPassword ? "eye" : "eye-off"}
+                  name={showPassword
+                    ? "eye"
+                    : "eye-off"}
                   size={24}
                   color="#0E457D"
                 />
@@ -480,7 +620,9 @@ export default function Register() {
           </View>
 
           <View style={styles.containerInput}>
-            {password2 ? <Text style={styles.fieldLabel}>Confirmar senha</Text> : null}
+            {password2
+              ? <Text style={styles.fieldLabel}>Confirmar senha</Text>
+              : null}
 
             <View style={styles.containerSenha}>
 
@@ -494,10 +636,14 @@ export default function Register() {
               />
 
               <TouchableOpacity
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                onPress={() =>
+                  setShowConfirmPassword(!showConfirmPassword)
+                }
               >
                 <Ionicons
-                  name={showConfirmPassword ? "eye" : "eye-off"}
+                  name={showConfirmPassword
+                    ? "eye"
+                    : "eye-off"}
                   size={24}
                   color="#0E457D"
                 />
@@ -539,6 +685,7 @@ export default function Register() {
         </View>
 
       </ScrollView>
+
     </View>
   );
 }
