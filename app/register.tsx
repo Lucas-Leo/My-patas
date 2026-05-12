@@ -1,5 +1,6 @@
 import {
   Animated,
+  Alert,
   Image,
   Modal,
   ScrollView,
@@ -9,14 +10,46 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../src/service/api";
+import axios from "axios";
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
 
-const CPFsCadastrados = ["12345678900"];
+type ApiResponse<T> = {
+  success?: boolean;
+  message?: string;
+  data?: T;
+};
+
+type RegisterResponse = ApiResponse<Usuario>;
+
+type IdResponse = {
+  id?: number;
+  message?: string;
+};
+
+type Usuario = {
+  id: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  data_nasc: string;
+  cpf: string;
+  foto: string | null;
+  fk_idsexo: number | null;
+  fk_idendereco: number | null;
+  fk_idtipo: number;
+  data_criacao: string;
+  data_att: string;
+};
+
+const ID_SEXO_NAO_INFORMADO = 3;
+const ID_TIPO_USUARIO_PADRAO = 3;
+const ID_ESTADO_PADRAO = 26;
 
 export default function Register() {
 
@@ -43,6 +76,105 @@ export default function Register() {
     cpf &&
     dataNascimento
   );
+
+  function obterMensagemErro(error: unknown) {
+    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
+      return (
+        error.response?.data?.erro ||
+        error.response?.data?.message ||
+        error.message
+      );
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "Ocorreu um problema ao criar a conta";
+  }
+
+  function extrairId(resposta: IdResponse, nomeEntidade: string) {
+    if (!resposta.id) {
+      throw new Error(`Nao foi possivel criar ${nomeEntidade}.`);
+    }
+
+    return resposta.id;
+  }
+
+  async function criarEnderecoPendente(cpfLimpo: string) {
+    const idEstado = ID_ESTADO_PADRAO;
+    const marcador = `Cadastro pendente ${cpfLimpo.slice(-4)} ${Date.now()}`;
+
+    const cidade = await api.post<IdResponse>("/cidades", {
+      cidade: marcador,
+      fk_idestado: idEstado,
+    });
+    const idCidade = extrairId(cidade.data, "a cidade pendente");
+
+    const bairro = await api.post<IdResponse>("/bairros", {
+      bairro: marcador,
+      fk_idcidade: idCidade,
+    });
+    const idBairro = extrairId(bairro.data, "o bairro pendente");
+
+    const rua = await api.post<IdResponse>("/ruas", {
+      rua: marcador,
+      fk_idbairro: idBairro,
+    });
+    const idRua = extrairId(rua.data, "a rua pendente");
+
+    const endereco = await api.post<IdResponse>("/enderecos", {
+      fk_idcidade: idCidade,
+      fk_idbairro: idBairro,
+      fk_idrua: idRua,
+      fk_idestado: idEstado,
+      numero: "0",
+      cep: "00000-000",
+      complemento: "Cadastro pendente",
+    });
+    const idEndereco = extrairId(endereco.data, "o endereco pendente");
+
+    return idEndereco;
+  }
+
+  function formatarDataParaApi(data: string) {
+    const [dia, mes, ano] = data.split("/");
+    return `${ano}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+  }
+
+  async function criarConta(): Promise<Usuario> {
+    try {
+      const cpfLimpo = cpf.replace(/\D/g, "");
+      const fkIdEndereco = await criarEnderecoPendente(cpfLimpo);
+
+      const res = await api.post<RegisterResponse>("/usuarios", {
+        nome: nome.trim(),
+        email: login.trim().toLowerCase(),
+        telefone: "",
+        fk_idsexo: ID_SEXO_NAO_INFORMADO,
+        data_nasc: formatarDataParaApi(dataNascimento),
+        cpf: cpfLimpo,
+        senha: password,
+        foto: null,
+        fk_idendereco: fkIdEndereco,
+        fk_idtipo: ID_TIPO_USUARIO_PADRAO,
+      });
+      console.log("RESPOSTA DO BACKEND:", res.data);
+
+      if (res.data.success === false || !res.data.data) {
+        throw new Error(res.data.message || "Nao foi possivel criar a conta.");
+      }
+
+      return {
+        ...res.data.data,
+        fk_idendereco: fkIdEndereco,
+        fk_idtipo: ID_TIPO_USUARIO_PADRAO,
+      };
+    } catch (error) {
+      console.log(obterMensagemErro(error));
+      throw error;
+    }
+  }
 
   const navigation = useNavigation();
 
@@ -149,7 +281,7 @@ export default function Register() {
     return idade;
   }
 
-  function onClickRegistrar() {
+  async function onClickRegistrar(): Promise<void> {
 
     if (!isFormComplete) {
       return;
@@ -159,13 +291,13 @@ export default function Register() {
       return;
     }
 
-    if (!validarCPF(cpf)) {
-      return;
-    }
+    // if (!validarCPF(cpf)) {
+    //   return;
+    // }
 
-    if (CPFsCadastrados.includes(cpf.replace(/\D/g, ""))) {
-      return;
-    }
+    // if (CPFsCadastrados.includes(cpf.replace(/\D/g, ""))) {
+    //   return;
+    // }
 
     if (!validarData(dataNascimento)) {
       return;
@@ -185,10 +317,22 @@ export default function Register() {
       return;
     }
 
-    setModalVisible(true);
-  }
+    try {
+      const usuario = await criarConta();
 
-  return (
+      await AsyncStorage.setItem(
+        "usuario",
+        JSON.stringify(usuario)
+      );
+
+      setModalVisible(true);
+    } catch (error) {
+      Alert.alert(
+        "Erro",
+        obterMensagemErro(error)
+      );
+    }
+  } return (
     <View style={styles.container}>
 
       <Modal

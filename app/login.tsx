@@ -1,13 +1,15 @@
 import {
   Alert,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from "react-native";
-
+import api from "../src/service/api";
+import axios, { AxiosError } from "axios";
 import { Link, useNavigation, useRouter } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
@@ -42,10 +44,10 @@ export default function Login() {
       return;
     }
 
-    if (login !== "teste@teste.com" || password !== "123") {
-      Alert.alert("Erro no login", "E-mail ou senha incorretos.");
-      return;
-    }
+    // if (login !== "teste@teste.com" || password !== "123") {
+    //   Alert.alert("Erro no login", "E-mail ou senha incorretos.");
+    //   return;
+    // }
 
     Alert.alert("Sucesso", "Login realizado com sucesso!");
     router.push("/home");

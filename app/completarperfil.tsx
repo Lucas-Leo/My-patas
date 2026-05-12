@@ -1,4 +1,5 @@
 import {
+  Alert,
   Animated,
   Image,
   Modal,
@@ -9,12 +10,36 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-
+import api from "../src/service/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Picker } from '@react-native-picker/picker';
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
+
+type Usuario = {
+  id: number;
+  idusuario?: number;
+  nome: string;
+  email: string;
+  telefone: string | null;
+  data_nasc: string;
+  cpf: string;
+  foto: string | null;
+  fk_idsexo: number | null;
+  fk_idendereco: number | null;
+  fk_idtipo: number;
+  data_criacao: string;
+  data_att: string;
+};
+
+type UsuarioSalvo = Partial<Usuario> & {
+  data?: Usuario;
+  usuario?: Usuario;
+  idusuario?: number;
+};
 
 export default function CompletarPerfil() {
 
@@ -46,6 +71,104 @@ export default function CompletarPerfil() {
     rua &&
     numero
   );
+
+  function obterMensagemErro(error: unknown) {
+    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
+      return (
+        error.response?.data?.erro ||
+        error.response?.data?.message ||
+        error.message
+      );
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "Nao foi possivel atualizar o perfil";
+  }
+
+  function normalizarUsuarioSalvo(valor: string): Usuario | null {
+    const parsed = JSON.parse(valor) as UsuarioSalvo;
+    const usuario = parsed.usuario || parsed.data || parsed;
+
+    if (!usuario.nome) {
+      return null;
+    }
+
+    const id = usuario.id || usuario.idusuario;
+
+    if (!id) {
+      return null;
+    }
+
+    return {
+      ...usuario,
+      id,
+    } as Usuario;
+  }
+
+  async function atualizarPerfil() {
+    try {
+
+      const usuarioSalvo = await AsyncStorage.getItem("usuario");
+
+      if (!usuarioSalvo) {
+        Alert.alert("Erro", "Usuário não encontrado");
+        return;
+      }
+
+      const usuario = normalizarUsuarioSalvo(usuarioSalvo);
+
+      if (!usuario) {
+        Alert.alert("Erro", "Usuario nao encontrado");
+        return;
+      }
+
+      const sexoMap: any = {
+        "Masculino": 1,
+        "Feminino": 2,
+        "Prefiro não dizer": 3
+      };
+
+      const body = {
+        nome: usuario.nome,
+        telefone,
+        fk_idsexo: sexoMap[sexo],
+        estado,
+        cidade,
+        bairro,
+        rua,
+        numero,
+        cep,
+        complemento
+      };
+
+      console.log("ID:", usuario.id);
+      console.log("BODY:", body);
+
+      await api.put(`/usuarios/usuario/endereco/${usuario.id}`, body);
+
+      await AsyncStorage.setItem(
+        "usuario",
+        JSON.stringify({
+          ...usuario,
+          telefone,
+          fk_idsexo: sexoMap[sexo]
+        })
+      );
+
+      setModalVisible(true);
+    } catch (error) {
+
+      console.log(obterMensagemErro(error));
+
+      Alert.alert(
+        "Erro",
+        "Não foi possível atualizar o perfil"
+      );
+    }
+  }
 
   useEffect(() => {
 
@@ -122,16 +245,17 @@ export default function CompletarPerfil() {
       setBairro(data.bairro || "");
       setRua(data.logradouro || "");
 
-    } catch (error) {}
+    } catch (error) { }
   }
 
-  function onClickFinalizar() {
+  async function onClickFinalizar() {
 
     if (!isFormComplete) {
+      Alert.alert("Preencha todos os campos");
       return;
     }
 
-    setModalVisible(true);
+    await atualizarPerfil();
   }
 
   return (
