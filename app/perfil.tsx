@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import {
   View,
@@ -13,6 +13,7 @@ import {
   Modal,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';
@@ -20,6 +21,15 @@ import BottomNav from '@/components/BottomNav';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
+
+type UsuarioPerfil = {
+  nome?: string;
+  email?: string;
+  telefone?: string | null;
+  endereco?: {
+    cidade?: string;
+  };
+};
 
 const ProfileScreen = () => {
 
@@ -29,16 +39,35 @@ const ProfileScreen = () => {
 
   const isDark = theme === 'dark';
 
-  const [nome, setNome] = useState("Margarete da Rosa Silva");
-  const [email, setEmail] = useState("margareterosasilva@gmail.com");
-  const [telefone, setTelefone] = useState("(16) 99999-9999");
-  const [cidade, setCidade] = useState("Taquaritinga");
-  const [senha, setSenha] = useState("123456");
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [telefone, setTelefone] = useState("");
+  const [cidade, setCidade] = useState("");
+  const [senha, setSenha] = useState("");
 
   const [editingField, setEditingField] = useState("");
   const [tempValue, setTempValue] = useState("");
 
   const [modalVisible, setModalVisible] = useState(false);
+
+  useEffect(() => {
+    carregarUsuario();
+  }, []);
+
+  async function carregarUsuario() {
+    const usuarioSalvo = await AsyncStorage.getItem("usuario");
+
+    if (!usuarioSalvo) {
+      return;
+    }
+
+    const usuario = JSON.parse(usuarioSalvo) as UsuarioPerfil;
+
+    setNome(usuario.nome || "");
+    setEmail(usuario.email || "");
+    setTelefone(usuario.telefone || "");
+    setCidade(usuario.endereco?.cidade || "");
+  }
 
   function openEditModal(field: string, currentValue: string) {
     setEditingField(field);
@@ -46,7 +75,28 @@ const ProfileScreen = () => {
     setModalVisible(true);
   }
 
-  function saveEdit() {
+  async function atualizarUsuarioSalvo(field: string, value: string) {
+    const usuarioSalvo = await AsyncStorage.getItem("usuario");
+
+    if (!usuarioSalvo || field === "senha") {
+      return;
+    }
+
+    const usuario = JSON.parse(usuarioSalvo);
+
+    if (field === "cidade") {
+      usuario.endereco = {
+        ...usuario.endereco,
+        cidade: value,
+      };
+    } else {
+      usuario[field] = value;
+    }
+
+    await AsyncStorage.setItem("usuario", JSON.stringify(usuario));
+  }
+
+  async function saveEdit() {
 
     switch (editingField) {
 
@@ -71,7 +121,13 @@ const ProfileScreen = () => {
         break;
     }
 
+    await atualizarUsuarioSalvo(editingField, tempValue);
     setModalVisible(false);
+  }
+
+  async function logout() {
+    await AsyncStorage.multiRemove(["usuario", "token", "ong"]);
+    router.replace("/login");
   }
 
   function getFieldTitle() {
@@ -620,6 +676,23 @@ const ProfileScreen = () => {
 
         </View>
 
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={logout}
+        >
+
+          <Icon
+            name="logout"
+            size={20}
+            color="#FFFFFF"
+          />
+
+          <Text style={styles.deleteButtonText}>
+            Sair da conta
+          </Text>
+
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.deleteButton}>
 
           <Icon
@@ -786,6 +859,18 @@ const styles = StyleSheet.create({
     width: "90%",
     height: 58,
     backgroundColor: "#FF3B3B",
+    borderRadius: 18,
+    marginTop: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+
+  logoutButton: {
+    width: "90%",
+    height: 58,
+    backgroundColor: "#0E457D",
     borderRadius: 18,
     marginTop: 25,
     flexDirection: "row",

@@ -1,21 +1,23 @@
 import {
   Alert,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View
 } from "react-native";
-
-import { Link, useNavigation, useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../src/service/api";
+import axios from "axios";
+import { Link, useRouter } from "expo-router";
 import { useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 export default function Login() {
-  const navigation = useNavigation();
   const router = useRouter();
 
   const [login, setLogin] = useState<string | null>(null);
@@ -31,7 +33,19 @@ export default function Login() {
     return;
   }
 
-  function OnClickLogin() {
+  function obterMensagemErro(error: unknown) {
+    if (axios.isAxiosError<{ message?: string; erro?: string }>(error)) {
+      return (
+        error.response?.data?.message ||
+        error.response?.data?.erro ||
+        "E-mail ou senha incorretos."
+      );
+    }
+
+    return "Nao foi possivel fazer login.";
+  }
+
+  async function OnClickLogin() {
     if (!login || !password) {
       Alert.alert("Campos obrigatórios", "Preencha todos os campos para continuar.");
       return;
@@ -42,13 +56,37 @@ export default function Login() {
       return;
     }
 
-    if (login !== "teste@teste.com" || password !== "123") {
-      Alert.alert("Erro no login", "E-mail ou senha incorretos.");
-      return;
-    }
+    try {
+      const response = await api.post("/login", {
+        email: login.trim().toLowerCase(),
+        senha: password,
+      });
 
-    Alert.alert("Sucesso", "Login realizado com sucesso!");
-    router.push("/home");
+      const usuarioSalvo = await AsyncStorage.getItem("usuario");
+      const usuarioAnterior = usuarioSalvo ? JSON.parse(usuarioSalvo) : null;
+      const usuarioApi = response.data.usuario;
+      const mesmoEmail = usuarioAnterior?.email === usuarioApi?.email;
+
+      await AsyncStorage.setItem("usuario", JSON.stringify({
+        ...usuarioApi,
+        telefone: usuarioApi?.telefone || (mesmoEmail ? usuarioAnterior?.telefone : ""),
+        endereco: {
+          ...(mesmoEmail ? usuarioAnterior?.endereco : {}),
+          ...usuarioApi?.endereco,
+        },
+      }));
+
+      await AsyncStorage.setItem("token", response.data.token);
+
+      if (response.data.ong) {
+        await AsyncStorage.setItem("ong", JSON.stringify(response.data.ong));
+      }
+
+      Alert.alert("Sucesso", "Login realizado com sucesso!");
+      router.push("/home");
+    } catch (error) {
+      Alert.alert("Erro no login", obterMensagemErro(error));
+    }
   }
 
   return (
