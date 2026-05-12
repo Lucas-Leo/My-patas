@@ -125,6 +125,11 @@ const ProfileScreen = () => {
     setModalVisible(false);
   }
 
+  async function logout() {
+    await AsyncStorage.multiRemove(["usuario", "token", "ong"]);
+    router.replace("/login");
+  }
+
   function getFieldTitle() {
 
     switch (editingField) {
@@ -671,6 +676,23 @@ const ProfileScreen = () => {
 
         </View>
 
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={logout}
+        >
+
+          <Icon
+            name="logout"
+            size={20}
+            color="#FFFFFF"
+          />
+
+          <Text style={styles.deleteButtonText}>
+            Sair da conta
+          </Text>
+
+        </TouchableOpacity>
+
         <TouchableOpacity style={styles.deleteButton}>
 
           <Icon
@@ -837,6 +859,18 @@ const styles = StyleSheet.create({
     width: "90%",
     height: 58,
     backgroundColor: "#FF3B3B",
+    borderRadius: 18,
+    marginTop: 25,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+
+  logoutButton: {
+    width: "90%",
+    height: 58,
+    backgroundColor: "#0E457D",
     borderRadius: 18,
     marginTop: 25,
     flexDirection: "row",
