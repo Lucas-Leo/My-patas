@@ -10,9 +10,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
-import api from "../src/service/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Picker } from '@react-native-picker/picker';
@@ -71,22 +69,6 @@ export default function CompletarPerfil() {
     rua &&
     numero
   );
-
-  function obterMensagemErro(error: unknown) {
-    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
-      return (
-        error.response?.data?.erro ||
-        error.response?.data?.message ||
-        error.message
-      );
-    }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    return "Nao foi possivel atualizar o perfil";
-  }
 
   function normalizarUsuarioSalvo(valor: string): Usuario | null {
     const parsed = JSON.parse(valor) as UsuarioSalvo;
@@ -147,21 +129,28 @@ export default function CompletarPerfil() {
       console.log("ID:", usuario.id);
       console.log("BODY:", body);
 
-      await api.put(`/usuarios/usuario/endereco/${usuario.id}`, body);
-
       await AsyncStorage.setItem(
         "usuario",
         JSON.stringify({
           ...usuario,
           telefone,
-          fk_idsexo: sexoMap[sexo]
+          fk_idsexo: sexoMap[sexo],
+          endereco: {
+            rua,
+            numero,
+            bairro,
+            cidade,
+            cep,
+            complemento,
+            estado,
+          }
         })
       );
 
       setModalVisible(true);
     } catch (error) {
 
-      console.log(obterMensagemErro(error));
+      console.log(error);
 
       Alert.alert(
         "Erro",
