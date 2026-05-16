@@ -13,28 +13,102 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../src/service/api";
 import axios from "axios";
 import { Link, useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
 
+// ======================================================
+// LOGO
+// ======================================================
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 export default function Login() {
 
   const router = useRouter();
 
+  // ======================================================
+  // LOGIN
+  // ======================================================
   const [login, setLogin] = useState<string | null>(null);
   const [password, setPassword] = useState<string | null>(null);
 
   const [showPassword, setShowPassword] = useState(false);
 
+  // ======================================================
+  // MODAIS
+  // ======================================================
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Modal código recuperação
+  const [codeModalVisible, setCodeModalVisible] = useState(false);
+
+  // Modal erro recuperação
+  const [errorModalVisible, setErrorModalVisible] = useState(false);
+
+  // ======================================================
+  // MODAL SUCESSO LOGIN
+  // ======================================================
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
+
+  // ======================================================
+  // RECUPERAÇÃO SENHA
+  // ======================================================
   const [emailRecovery, setEmailRecovery] = useState("");
 
+  // Código digitado usuário
+  const [recoveryCode, setRecoveryCode] = useState("");
+
+  // Loading envio email
+  const [loadingRecovery, setLoadingRecovery] = useState(false);
+
+  // ======================================================
+  // TIMER RECUPERAÇÃO
+  // ======================================================
+  const [timer, setTimer] = useState(60);
+
+  // Quando true usuário pode reenviar código
+  const [canResendCode, setCanResendCode] = useState(false);
+
+  // ======================================================
+  // TIMER
+  // ======================================================
+  useEffect(() => {
+
+    let interval: NodeJS.Timeout;
+
+    if (codeModalVisible && timer > 0) {
+
+      interval = setInterval(() => {
+
+        setTimer((prev) => prev - 1);
+
+      }, 1000);
+    }
+
+    if (timer === 0) {
+
+      setCanResendCode(true);
+    }
+
+    return () => {
+
+      if (interval) clearInterval(interval);
+    };
+
+  }, [codeModalVisible, timer]);
+
+  // ======================================================
+  // VALIDAR EMAIL
+  // ======================================================
   function validateEmail(email: string) {
+
     return /\S+@\S+\.\S+/.test(email);
   }
 
+  // ======================================================
+  // BOTÃO LOGIN DESABILITADO
+  // ======================================================
   function onClickButtonDisabled() {
+
     Alert.alert(
       "Atenção",
       "Preencha os campos obrigatórios para acessar."
@@ -43,6 +117,9 @@ export default function Login() {
     return;
   }
 
+  // ======================================================
+  // MENSAGEM ERRO LOGIN
+  // ======================================================
   function obterMensagemErro(error: unknown) {
 
     if (axios.isAxiosError<{ message?: string; erro?: string }>(error)) {
@@ -57,6 +134,9 @@ export default function Login() {
     return "Nao foi possivel fazer login.";
   }
 
+  // ======================================================
+  // LOGIN
+  // ======================================================
   async function OnClickLogin() {
 
     if (!login || !password) {
@@ -80,6 +160,68 @@ export default function Login() {
     }
 
     try {
+
+      // ======================================================
+      // LOGIN FICTÍCIO
+      // ======================================================
+      const fakeEmail = "teste@teste.com";
+      const fakePassword = "123";
+
+      // Simula delay backend
+      await new Promise(resolve =>
+        setTimeout(resolve, 1500)
+      );
+
+      // ======================================================
+      // VALIDA LOGIN FICTÍCIO
+      // ======================================================
+      if (
+        login.trim().toLowerCase() === fakeEmail &&
+        password === fakePassword
+      ) {
+
+        // ======================================================
+        // DADOS FICTÍCIOS USUÁRIO
+        // ======================================================
+        const fakeUser = {
+          id: 1,
+          nome: "Usuário Teste",
+          email: fakeEmail,
+          telefone: "(16) 99999-9999",
+          endereco: {
+            cidade: "Matão",
+            estado: "SP",
+          }
+        };
+
+        // Salva usuário fictício
+        await AsyncStorage.setItem(
+          "usuario",
+          JSON.stringify(fakeUser)
+        );
+
+        // Salva token fictício
+        await AsyncStorage.setItem(
+          "token",
+          "token-ficticio-123"
+        );
+
+        // ======================================================
+        // ABRE MODAL SUCESSO
+        // ======================================================
+        setSuccessModalVisible(true);
+
+        // Fecha sozinho após 2 segundos
+        setTimeout(() => {
+
+          setSuccessModalVisible(false);
+
+          router.push("/home");
+
+        }, 2000);
+
+        return;
+      }
 
       const response = await api.post("/login", {
         email: login.trim().toLowerCase(),
@@ -125,12 +267,19 @@ export default function Login() {
         );
       }
 
-      Alert.alert(
-        "Sucesso",
-        "Login realizado com sucesso!"
-      );
+      // ======================================================
+      // ABRE MODAL SUCESSO
+      // ======================================================
+      setSuccessModalVisible(true);
 
-      router.push("/home");
+      // Fecha sozinho após 2 segundos
+      setTimeout(() => {
+
+        setSuccessModalVisible(false);
+
+        router.push("/home");
+
+      }, 2000);
 
     } catch (error) {
 
@@ -141,6 +290,9 @@ export default function Login() {
     }
   }
 
+  // ======================================================
+  // ENVIAR EMAIL RECUPERAÇÃO
+  // ======================================================
   async function handleForgotPassword() {
 
     if (!emailRecovery) {
@@ -165,23 +317,126 @@ export default function Login() {
 
     try {
 
-      await api.post("/forgot-password", {
-        email: emailRecovery.trim().toLowerCase(),
-      });
+      setLoadingRecovery(true);
 
-      Alert.alert(
-        "Recuperação enviada",
-        "Verifique seu e-mail para redefinir sua senha."
+      // ======================================================
+      // SIMULAÇÃO ENVIO EMAIL
+      // ======================================================
+      await new Promise(resolve =>
+        setTimeout(resolve, 2000)
       );
 
+      console.log("=================================");
+      console.log("EMAIL FICTÍCIO ENVIADO");
+      console.log("EMAIL:", emailRecovery);
+      console.log("CÓDIGO TESTE: 123456");
+      console.log("=================================");
+
+      // Fecha modal email
       setModalVisible(false);
-      setEmailRecovery("");
+
+      // Abre modal código
+      setCodeModalVisible(true);
+
+      // Reinicia timer
+      setTimer(60);
+
+      // Bloqueia reenviar
+      setCanResendCode(false);
+
+    } catch (error) {
+
+      console.log("ERRO RECUPERAÇÃO:", error);
+
+      setErrorModalVisible(true);
+
+    } finally {
+
+      setLoadingRecovery(false);
+    }
+  }
+
+  // ======================================================
+  // REENVIAR CÓDIGO
+  // ======================================================
+  async function handleResendCode() {
+
+    try {
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 1500)
+      );
+
+      console.log("=================================");
+      console.log("CÓDIGO REENVIADO");
+      console.log("EMAIL:", emailRecovery);
+      console.log("CÓDIGO TESTE: 123456");
+      console.log("=================================");
+
+      setTimer(60);
+
+      setCanResendCode(false);
+
+      Alert.alert(
+        "Código reenviado",
+        "Verifique novamente o console."
+      );
 
     } catch (error) {
 
       Alert.alert(
         "Erro",
-        "Não foi possível enviar o e-mail de recuperação."
+        "Não foi possível reenviar o código."
+      );
+    }
+  }
+
+  // ======================================================
+  // VALIDAR CÓDIGO
+  // ======================================================
+  async function handleValidateCode() {
+
+    if (!recoveryCode) {
+
+      Alert.alert(
+        "Atenção",
+        "Digite o código recebido."
+      );
+
+      return;
+    }
+
+    try {
+
+      if (recoveryCode !== "123456") {
+
+        Alert.alert(
+          "Código inválido",
+          "O código informado está incorreto."
+        );
+
+        return;
+      }
+
+      await new Promise(resolve =>
+        setTimeout(resolve, 1000)
+      );
+
+      setCodeModalVisible(false);
+
+      router.push({
+        pathname: "/novasenha",
+        params: {
+          email: emailRecovery,
+          code: recoveryCode,
+        }
+      });
+
+    } catch (error) {
+
+      Alert.alert(
+        "Erro",
+        "Não foi possível validar o código."
       );
     }
   }
@@ -190,6 +445,9 @@ export default function Login() {
 
     <View style={styles.container}>
 
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
       <View style={styles.header}>
 
         <Image
@@ -205,8 +463,12 @@ export default function Login() {
 
       </View>
 
+      {/* ======================================================
+          MAIN
+      ====================================================== */}
       <View style={styles.main}>
 
+        {/* EMAIL */}
         <View style={styles.containerInput}>
 
           {login ? (
@@ -224,6 +486,7 @@ export default function Login() {
 
         </View>
 
+        {/* SENHA */}
         <View style={styles.containerInput}>
 
           {password ? (
@@ -259,6 +522,7 @@ export default function Login() {
 
           </View>
 
+          {/* ESQUECEU SENHA */}
           <TouchableOpacity
             style={styles.forgotPasswordButton}
             onPress={() => setModalVisible(true)}
@@ -272,6 +536,7 @@ export default function Login() {
 
         </View>
 
+        {/* BOTÃO LOGIN */}
         {(login || password) && (
 
           <TouchableOpacity
@@ -286,6 +551,7 @@ export default function Login() {
           </TouchableOpacity>
         )}
 
+        {/* BOTÃO DESABILITADO */}
         {!login && !password && (
 
           <TouchableOpacity
@@ -302,6 +568,9 @@ export default function Login() {
 
       </View>
 
+      {/* ======================================================
+          FOOTER
+      ====================================================== */}
       <View style={styles.footer}>
 
         <Text>
@@ -322,6 +591,42 @@ export default function Login() {
 
       </View>
 
+      {/* ======================================================
+          MODAL SUCESSO LOGIN
+      ====================================================== */}
+      <Modal
+        visible={successModalVisible}
+        transparent
+        animationType="fade"
+      >
+
+        <View style={styles.modalOverlay}>
+
+          <View style={styles.successModalContainer}>
+
+            <Ionicons
+              name="checkmark-circle"
+              size={70}
+              color="#32C766"
+            />
+
+            <Text style={styles.successTitle}>
+              Login realizado!
+            </Text>
+
+            <Text style={styles.successDescription}>
+              Você será redirecionado em instantes.
+            </Text>
+
+          </View>
+
+        </View>
+
+      </Modal>
+
+      {/* ======================================================
+          MODAL RECUPERAR SENHA
+      ====================================================== */}
       <Modal
         visible={modalVisible}
         transparent
@@ -337,7 +642,7 @@ export default function Login() {
             </Text>
 
             <Text style={styles.modalDescription}>
-              Digite seu e-mail para receber o link de recuperação.
+              Digite seu e-mail para receber o código de recuperação.
             </Text>
 
             <TextInput
@@ -353,7 +658,7 @@ export default function Login() {
             >
 
               <Text style={styles.modalButtonText}>
-                Enviar
+                {loadingRecovery ? "Enviando..." : "Enviar"}
               </Text>
 
             </TouchableOpacity>
@@ -374,10 +679,134 @@ export default function Login() {
 
       </Modal>
 
+      {/* ======================================================
+          MODAL CÓDIGO RECUPERAÇÃO
+      ====================================================== */}
+      <Modal
+        visible={codeModalVisible}
+        transparent
+        animationType="fade"
+      >
+
+        <View style={styles.modalOverlay}>
+
+          <View style={styles.modalContainer}>
+
+            <Text style={styles.modalTitle}>
+              Validar código
+            </Text>
+
+            <Text style={styles.modalDescription}>
+              Digite o código enviado para seu e-mail.
+            </Text>
+
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Digite o código"
+              value={recoveryCode}
+              onChangeText={setRecoveryCode}
+              keyboardType="numeric"
+            />
+
+            {!canResendCode && (
+
+              <Text style={styles.timerText}>
+                Reenviar código em {timer}s
+              </Text>
+            )}
+
+            {canResendCode && (
+
+              <TouchableOpacity
+                onPress={handleResendCode}
+              >
+
+                <Text style={styles.resendText}>
+                  Reenviar código
+                </Text>
+
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleValidateCode}
+            >
+
+              <Text style={styles.modalButtonText}>
+                Validar código
+              </Text>
+
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setCodeModalVisible(false)}
+            >
+
+              <Text style={styles.cancelText}>
+                Cancelar
+              </Text>
+
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
+      </Modal>
+
+      {/* ======================================================
+          MODAL ERRO ENVIO EMAIL
+      ====================================================== */}
+      <Modal
+        visible={errorModalVisible}
+        transparent
+        animationType="fade"
+      >
+
+        <View style={styles.modalOverlay}>
+
+          <View style={styles.errorModalContainer}>
+
+            <Ionicons
+              name="alert-circle"
+              size={60}
+              color="#FF4242"
+            />
+
+            <Text style={styles.errorTitle}>
+              Erro ao enviar
+            </Text>
+
+            <Text style={styles.errorDescription}>
+              Não foi possível enviar o e-mail de recuperação.
+              Tente novamente em alguns instantes.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.errorButton}
+              onPress={() => setErrorModalVisible(false)}
+            >
+
+              <Text style={styles.modalButtonText}>
+                Fechar
+              </Text>
+
+            </TouchableOpacity>
+
+          </View>
+
+        </View>
+
+      </Modal>
+
     </View>
   );
 }
 
+// ======================================================
+// STYLES
+// ======================================================
 const styles = StyleSheet.create({
 
   container: {
@@ -574,5 +1003,75 @@ const styles = StyleSheet.create({
     color: "#0E457D",
     fontWeight: "600",
     fontSize: 15,
+  },
+
+  timerText: {
+    color: "#666",
+    marginBottom: 15,
+    fontSize: 14,
+  },
+
+  resendText: {
+    color: "#0E457D",
+    fontWeight: "bold",
+    marginBottom: 15,
+    fontSize: 15,
+  },
+
+  errorModalContainer: {
+    width: "85%",
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 30,
+    alignItems: "center",
+  },
+
+  errorTitle: {
+    marginTop: 15,
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FF4242",
+  },
+
+  errorDescription: {
+    marginTop: 10,
+    textAlign: "center",
+    color: "#555",
+    fontSize: 15,
+    marginBottom: 25,
+  },
+
+  errorButton: {
+    width: "100%",
+    height: 50,
+    backgroundColor: "#FF4242",
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // ======================================================
+  // MODAL SUCESSO LOGIN
+  // ======================================================
+  successModalContainer: {
+    width: "80%",
+    backgroundColor: "white",
+    borderRadius: 25,
+    padding: 35,
+    alignItems: "center",
+  },
+
+  successTitle: {
+    marginTop: 15,
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#32C766",
+  },
+
+  successDescription: {
+    marginTop: 10,
+    textAlign: "center",
+    color: "#555",
+    fontSize: 16,
   },
 });
