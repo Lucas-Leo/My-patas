@@ -11,6 +11,8 @@ import {
   View
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../src/service/api";
+import axios from "axios";
 import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Picker } from '@react-native-picker/picker';
@@ -37,6 +39,17 @@ type UsuarioSalvo = Partial<Usuario> & {
   data?: Usuario;
   usuario?: Usuario;
   idusuario?: number;
+};
+
+type IdResponse = {
+  id?: number;
+  message?: string;
+};
+
+type EstadoApi = {
+  idestado: number;
+  sigla: string;
+  estado?: string;
 };
 
 export default function CompletarPerfil() {
@@ -90,6 +103,77 @@ export default function CompletarPerfil() {
     } as Usuario;
   }
 
+  function obterMensagemErro(error: unknown) {
+    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
+      return (
+        error.response?.data?.erro ||
+        error.response?.data?.message ||
+        error.message
+      );
+    }
+
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "Nao foi possivel atualizar o perfil";
+  }
+
+  function extrairId(resposta: IdResponse, nomeEntidade: string) {
+    if (!resposta.id) {
+      throw new Error(`Nao foi possivel criar ${nomeEntidade}.`);
+    }
+
+    return resposta.id;
+  }
+
+  async function buscarIdEstado(sigla: string) {
+    const res = await api.get<EstadoApi[]>("/estados");
+    const estadoEncontrado = res.data.find(
+      (item) => item.sigla.toUpperCase() === sigla.trim().toUpperCase()
+    );
+
+    if (!estadoEncontrado) {
+      throw new Error("Estado nao encontrado na API.");
+    }
+
+    return estadoEncontrado.idestado;
+  }
+
+  async function criarEnderecoComDadosDoPerfil() {
+    const idEstado = await buscarIdEstado(estado);
+
+    const cidadeResponse = await api.post<IdResponse>("/cidades", {
+      cidade,
+      fk_idestado: idEstado,
+    });
+    const idCidade = extrairId(cidadeResponse.data, "a cidade");
+
+    const bairroResponse = await api.post<IdResponse>("/bairros", {
+      bairro,
+      fk_idcidade: idCidade,
+    });
+    const idBairro = extrairId(bairroResponse.data, "o bairro");
+
+    const ruaResponse = await api.post<IdResponse>("/ruas", {
+      rua,
+      fk_idbairro: idBairro,
+    });
+    const idRua = extrairId(ruaResponse.data, "a rua");
+
+    const enderecoResponse = await api.post<IdResponse>("/enderecos", {
+      fk_idcidade: idCidade,
+      fk_idbairro: idBairro,
+      fk_idrua: idRua,
+      fk_idestado: idEstado,
+      numero,
+      cep,
+      complemento,
+    });
+
+    return extrairId(enderecoResponse.data, "o endereco");
+  }
+
   async function atualizarPerfil() {
     try {
 
@@ -113,10 +197,13 @@ export default function CompletarPerfil() {
         "Prefiro não dizer": 3
       };
 
+      const idSexo = sexoMap[sexo];
+      let fkIdEndereco = usuario.fk_idendereco;
+
       const body = {
         nome: usuario.nome,
         telefone,
-        fk_idsexo: sexoMap[sexo],
+        fk_idsexo: idSexo,
         estado,
         cidade,
         bairro,
@@ -129,12 +216,40 @@ export default function CompletarPerfil() {
       console.log("ID:", usuario.id);
       console.log("BODY:", body);
 
+      if (fkIdEndereco) {
+        await api.put(`/usuarios/usuario/endereco/${usuario.id}`, body);
+        await api.patch(`/usuarios/telefone/${usuario.id}`, {
+          telefone,
+        });
+      } else {
+        const senhaCadastro = await AsyncStorage.getItem("senhaCadastro");
+
+        if (!senhaCadastro) {
+          throw new Error("Senha do cadastro nao encontrada para concluir o perfil.");
+        }
+
+        fkIdEndereco = await criarEnderecoComDadosDoPerfil();
+
+        await api.put(`/usuarios/${usuario.id}`, {
+          nome: usuario.nome,
+          telefone,
+          fk_idsexo: idSexo,
+          senha: senhaCadastro,
+          foto: usuario.foto,
+          fk_idendereco: fkIdEndereco,
+          fk_idtipo: usuario.fk_idtipo,
+        });
+
+        await AsyncStorage.removeItem("senhaCadastro");
+      }
+
       await AsyncStorage.setItem(
         "usuario",
         JSON.stringify({
           ...usuario,
           telefone,
-          fk_idsexo: sexoMap[sexo],
+          fk_idsexo: idSexo,
+          fk_idendereco: fkIdEndereco,
           endereco: {
             rua,
             numero,
@@ -150,7 +265,7 @@ export default function CompletarPerfil() {
       setModalVisible(true);
     } catch (error) {
 
-      console.log(error);
+      console.log(obterMensagemErro(error));
 
       Alert.alert(
         "Erro",

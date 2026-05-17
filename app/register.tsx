@@ -27,11 +27,6 @@ type ApiResponse<T> = {
 
 type RegisterResponse = ApiResponse<Usuario>;
 
-type IdResponse = {
-  id?: number;
-  message?: string;
-};
-
 type Usuario = {
   id: number;
   nome: string;
@@ -47,9 +42,7 @@ type Usuario = {
   data_att: string;
 };
 
-const ID_SEXO_NAO_INFORMADO = 3;
 const ID_TIPO_USUARIO_PADRAO = 3;
-const ID_ESTADO_PADRAO = 26;
 
 export default function Register() {
 
@@ -98,54 +91,6 @@ export default function Register() {
     return "Ocorreu um problema ao criar a conta";
   }
 
-  function extrairId(resposta: IdResponse, nomeEntidade: string) {
-    if (!resposta.id) {
-      throw new Error(`Nao foi possivel criar ${nomeEntidade}.`);
-    }
-
-    return resposta.id;
-  }
-
-  async function criarEnderecoPendente(cpfLimpo: string) {
-    const idEstado = ID_ESTADO_PADRAO;
-    const marcador = `Cadastro pendente ${cpfLimpo.slice(-4)} ${Date.now()}`;
-
-    const cidade = await api.post<IdResponse>("/cidades", {
-      cidade: marcador,
-      fk_idestado: idEstado,
-    });
-
-    const idCidade = extrairId(cidade.data, "a cidade pendente");
-
-    const bairro = await api.post<IdResponse>("/bairros", {
-      bairro: marcador,
-      fk_idcidade: idCidade,
-    });
-
-    const idBairro = extrairId(bairro.data, "o bairro pendente");
-
-    const rua = await api.post<IdResponse>("/ruas", {
-      rua: marcador,
-      fk_idbairro: idBairro,
-    });
-
-    const idRua = extrairId(rua.data, "a rua pendente");
-
-    const endereco = await api.post<IdResponse>("/enderecos", {
-      fk_idcidade: idCidade,
-      fk_idbairro: idBairro,
-      fk_idrua: idRua,
-      fk_idestado: idEstado,
-      numero: "0",
-      cep: "00000-000",
-      complemento: "Cadastro pendente",
-    });
-
-    const idEndereco = extrairId(endereco.data, "o endereco pendente");
-
-    return idEndereco;
-  }
-
   function formatarDataParaApi(data: string) {
     const [dia, mes, ano] = data.split("/");
 
@@ -157,18 +102,16 @@ export default function Register() {
 
       const cpfLimpo = cpf.replace(/\D/g, "");
 
-      const fkIdEndereco = await criarEnderecoPendente(cpfLimpo);
-
       const res = await api.post<RegisterResponse>("/usuarios", {
         nome: nome.trim(),
         email: login.trim().toLowerCase(),
-        telefone: "",
-        fk_idsexo: ID_SEXO_NAO_INFORMADO,
+        telefone: null,
+        fk_idsexo: null,
         data_nasc: formatarDataParaApi(dataNascimento),
         cpf: cpfLimpo,
         senha: password,
         foto: null,
-        fk_idendereco: fkIdEndereco,
+        fk_idendereco: null,
         fk_idtipo: ID_TIPO_USUARIO_PADRAO,
       });
 
@@ -182,7 +125,6 @@ export default function Register() {
 
       return {
         ...res.data.data,
-        fk_idendereco: fkIdEndereco,
         fk_idtipo: ID_TIPO_USUARIO_PADRAO,
       };
 
@@ -416,6 +358,7 @@ export default function Register() {
         "usuario",
         JSON.stringify(usuario)
       );
+      await AsyncStorage.setItem("senhaCadastro", password);
 
       setModalEmoji("🐾");
 
