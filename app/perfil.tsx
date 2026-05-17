@@ -19,6 +19,7 @@ import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
+import * as ImagePicker from 'expo-image-picker';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
@@ -45,6 +46,8 @@ const ProfileScreen = () => {
   const [telefone, setTelefone] = useState("");
   const [cidade, setCidade] = useState("");
   const [senha, setSenha] = useState("");
+
+  const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
   const [editingField, setEditingField] = useState("");
   const [tempValue, setTempValue] = useState("");
@@ -106,6 +109,72 @@ const ProfileScreen = () => {
     setEmail(usuario.email || "");
     setTelefone(usuario.telefone || "");
     setCidade(usuario.endereco?.cidade || "");
+
+    const fotoSalva = await AsyncStorage.getItem("fotoPerfil");
+
+    if (fotoSalva) {
+      setFotoPerfil(fotoSalva);
+    }
+  }
+
+  async function alterarFotoPerfil() {
+
+    const permissao =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissao.granted) {
+
+      setFeedbackEmoji("📷");
+
+      setFeedbackTitle("Permissão necessária");
+
+      setFeedbackMessage(
+        "Precisamos da permissão para acessar suas fotos."
+      );
+
+      setFeedbackAction("save");
+
+      setFeedbackVisible(true);
+
+      return;
+    }
+
+    const resultado =
+      await ImagePicker.launchImageLibraryAsync({
+
+        mediaTypes: ['images'],
+
+        allowsEditing: true,
+
+        aspect: [1, 1],
+
+        quality: 1,
+      });
+
+    if (resultado.canceled) {
+      return;
+    }
+
+    const novaFoto = resultado.assets[0].uri;
+
+    setFotoPerfil(novaFoto);
+
+    await AsyncStorage.setItem(
+      "fotoPerfil",
+      novaFoto
+    );
+
+    setFeedbackEmoji("🖼️");
+
+    setFeedbackTitle("Foto atualizada");
+
+    setFeedbackMessage(
+      "Sua foto de perfil foi alterada com sucesso."
+    );
+
+    setFeedbackAction("save");
+
+    setFeedbackVisible(true);
   }
 
   function openEditModal(field: string, currentValue: string) {
@@ -211,7 +280,8 @@ const ProfileScreen = () => {
     await AsyncStorage.multiRemove([
       "usuario",
       "token",
-      "ong"
+      "ong",
+      "fotoPerfil"
     ]);
 
     router.replace("/login");
@@ -239,7 +309,8 @@ const ProfileScreen = () => {
     await AsyncStorage.multiRemove([
       "usuario",
       "token",
-      "ong"
+      "ong",
+      "fotoPerfil"
     ]);
 
     setFeedbackEmoji("🗑️");
@@ -513,11 +584,18 @@ const ProfileScreen = () => {
           <View style={styles.photoContainer}>
 
             <Image
-              source={profileImage}
+              source={
+                fotoPerfil
+                  ? { uri: fotoPerfil }
+                  : profileImage
+              }
               style={styles.profilePhoto}
             />
 
-            <TouchableOpacity style={styles.editPhotoButton}>
+            <TouchableOpacity
+              style={styles.editPhotoButton}
+              onPress={alterarFotoPerfil}
+            >
 
               <Icon
                 name="camera"
@@ -649,6 +727,73 @@ const ProfileScreen = () => {
           ))}
 
         </View>
+
+        {/* NOVA ÁREA - EDITAR PERFIL COMPLETO */}
+
+        <TouchableOpacity
+          style={[
+            styles.fullEditCard,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
+          onPress={() => router.push("/editaruserComum")} 
+          activeOpacity={0.8}
+        >
+
+          <View style={styles.fullEditLeft}>
+
+            <View style={styles.fullEditIconContainer}>
+
+              <Icon
+                name="account-edit-outline"
+                size={26}
+                color="#FFFFFF"
+              />
+
+            </View>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fullEditTitle,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#0E457D"
+                  }
+                ]}
+              >
+                Editar perfil completo
+              </Text>
+
+              <Text
+                style={[
+                  styles.fullEditSubtitle,
+                  {
+                    color: isDark
+                      ? "#BBBBBB"
+                      : "#666666"
+                  }
+                ]}
+              >
+                Acesse endereço, segurança e outros dados
+              </Text>
+
+            </View>
+
+          </View>
+
+          <Icon
+            name="chevron-right"
+            size={28}
+            color="#999"
+          />
+
+        </TouchableOpacity>
 
         <View
           style={[
@@ -892,6 +1037,50 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: "#EAEAEA",
     marginVertical: 18,
+  },
+
+  /* NOVOS ESTILOS */
+
+  fullEditCard: {
+    width: "90%",
+    borderRadius: 28,
+    marginTop: 20,
+    padding: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  fullEditLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+
+  fullEditIconContainer: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#FF42B3",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 16,
+  },
+
+  fullEditTitle: {
+    fontSize: 17,
+    fontWeight: "bold",
+  },
+
+  fullEditSubtitle: {
+    marginTop: 5,
+    fontSize: 13,
+    lineHeight: 18,
+    width: "92%",
   },
 
   settingsCard: {
