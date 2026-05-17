@@ -10,37 +10,30 @@ import {
   Animated,
   PanResponder,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { AntDesign } from '@expo/vector-icons';
-import { useRouter } from "expo-router";
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
+import api from '../src/service/api';
+import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
 
-const logoApp = require("@/assets/images/LogoPataAzul.png");
+const logoApp = require('@/assets/images/LogoPataAzul.png');
 const { width, height } = Dimensions.get('window');
 
-const initialPets = [
-  { id: 1, name: 'Luke', ong: 'ONG1 - Paz e Amor', description: 'Cachorro dócil, ama brincar e é muito carinhoso.', image: require('@/assets/images/cachorro01.jpg') },
-  { id: 2, name: 'Princesa', ong: 'ONG Amigo Fiel', description: 'Muito tranquila e ótima companhia.', image: require('@/assets/images/cachorro02.jpg') },
-  { id: 3, name: 'Max', ong: 'Abrigo do Coração', description: 'Cheio de energia e adora correr.', image: require('@/assets/images/cachorro03.jpg') },
-  { id: 4, name: 'Theo', ong: 'Abrigo do Coração', description: 'Carinhoso e ótimo com crianças.', image: require('@/assets/images/cachorro04.jpg') },
-  { id: 5, name: 'Dalila', ong: 'Amigos de quatro patas', description: 'Muito calma e amorosa.', image: require('@/assets/images/cachorro05.jpg') },
-  { id: 6, name: 'Billy', ong: 'Aumigos', description: 'Brincalhão e amigável.', image: require('@/assets/images/cachorro06.jpg') },
-  { id: 7, name: 'Mingau', ong: 'ONG1 - Paz e Amor', description: 'Gato tranquilo e independente.', image: require('@/assets/images/gato01.jpg') },
-  { id: 8, name: 'Salem', ong: 'ONG Amigo Fiel', description: 'Curioso e esperto.', image: require('@/assets/images/gato02.jpg') },
-  { id: 9, name: 'Matheo', ong: 'Abrigo do Coração', description: 'Adora carinho e colo.', image: require('@/assets/images/gato03.jpg') },
-  { id: 10, name: 'Garfield', ong: 'Abrigo do Coração', description: 'Preguiçoso e muito fofo.', image: require('@/assets/images/gato04.jpg') },
-  { id: 11, name: 'Kity', ong: 'Amigos de quatro patas', description: 'Delicada e carinhosa.', image: require('@/assets/images/gato05.jpg') },
-  { id: 12, name: 'Chicó', ong: 'Aumigos', description: 'Brincalhão e curioso.', image: require('@/assets/images/gato06.jpg') },
-];
+function petImageSource(pet?: PetApp | null) {
+  return pet?.imageUri ? { uri: pet.imageUri } : logoApp;
+}
 
 export default function SwipeScreen() {
-  const router = useRouter();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  const [pets, setPets] = useState(initialPets);
-  const [selectedPet, setSelectedPet] = useState(null);
+  const [pets, setPets] = useState<PetApp[]>([]);
+  const [selectedPet, setSelectedPet] = useState<PetApp | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [savingLike, setSavingLike] = useState(false);
 
   const position = useRef(new Animated.ValueXY()).current;
   const likeAnim = useRef(new Animated.Value(0)).current;
@@ -51,12 +44,39 @@ export default function SwipeScreen() {
   const currentPet = pets[0];
 
   useEffect(() => {
-    if (pets.length === 0) {
-      setTimeout(() => {
-        router.push("/ongs");
-      }, 300);
+    carregarPets();
+  }, []);
+
+  async function carregarPets() {
+    try {
+      setLoading(true);
+
+      const petsResponse = await api.get('/pets');
+      const petsBanco = Array.isArray(petsResponse.data)
+        ? petsResponse.data.map((pet: ApiPet) => normalizarPet(pet)).filter((pet: PetApp) => Number.isFinite(pet.id))
+        : [];
+
+      const idUsuario = await obterIdUsuarioLogado();
+
+      if (!idUsuario) {
+        setPets(petsBanco);
+        return;
+      }
+
+      const favoritosResponse = await api.get(`/petsfavoritados/usuario/${idUsuario}`);
+      const favoritosIds = new Set(
+        Array.isArray(favoritosResponse.data)
+          ? favoritosResponse.data.map((pet: ApiPet) => Number(pet.fk_idpet || pet.idpet))
+          : []
+      );
+
+      setPets(petsBanco.filter((pet: PetApp) => !favoritosIds.has(pet.id)));
+    } catch (error) {
+      Alert.alert('Erro', 'Nao foi possivel carregar os pets do banco.');
+    } finally {
+      setLoading(false);
     }
-  }, [pets]);
+  }
 
   const rotate = position.x.interpolate({
     inputRange: [-width, 0, width],
@@ -85,13 +105,36 @@ export default function SwipeScreen() {
     ]).start();
   };
 
-  const handleLike = () => {
-    triggerLikeAnimation();
-    Animated.timing(position, {
-      toValue: { x: width, y: 0 },
-      duration: 300,
-      useNativeDriver: true,
-    }).start(removeTopCard);
+  const handleLike = async () => {
+    if (!currentPet || savingLike) return;
+
+    try {
+      setSavingLike(true);
+
+      const idUsuario = await obterIdUsuarioLogado();
+
+      if (!idUsuario) {
+        Alert.alert('Login necessario', 'Entre na sua conta para favoritar pets.');
+        return;
+      }
+
+      await api.post('/petsfavoritados', {
+        fk_idusuario: idUsuario,
+        fk_idpet: currentPet.id,
+      });
+
+      triggerLikeAnimation();
+      Animated.timing(position, {
+        toValue: { x: width, y: 0 },
+        duration: 300,
+        useNativeDriver: true,
+      }).start(removeTopCard);
+    } catch (error) {
+      Alert.alert('Erro', 'Nao foi possivel favoritar este pet.');
+      resetPosition();
+    } finally {
+      setSavingLike(false);
+    }
   };
 
   const handleSkip = () => {
@@ -109,7 +152,7 @@ export default function SwipeScreen() {
     }).start();
   };
 
-  const openSheet = (pet) => {
+  const openSheet = (pet: PetApp) => {
     setSelectedPet(pet);
     Animated.parallel([
       Animated.timing(sheetY, {
@@ -203,7 +246,9 @@ export default function SwipeScreen() {
           <AntDesign name="heart" size={120} color="#FF3040" />
         </Animated.View>
 
-        {currentPet ? (
+        {loading ? (
+          <ActivityIndicator size="large" color="#FF2BAA" />
+        ) : currentPet ? (
           <>
             <Animated.View
               {...panResponder.panHandlers}
@@ -217,7 +262,7 @@ export default function SwipeScreen() {
             >
               <TouchableOpacity activeOpacity={0.9} onPress={() => openSheet(currentPet)}>
                 <View style={[styles.cardContainer, { backgroundColor: isDark ? '#1F1F1F' : '#fff' }]}>
-                  <Image source={currentPet.image} style={styles.petImage} />
+                  <Image source={petImageSource(currentPet)} style={styles.petImage} />
 
                   <View style={styles.infoBox}>
                     <TouchableOpacity onPress={() => openSheet(currentPet)}>
@@ -245,8 +290,8 @@ export default function SwipeScreen() {
             </View>
           </>
         ) : (
-          <Text style={{ color: isDark ? '#fff' : '#000' }}>
-            Redirecionando...
+          <Text style={[styles.emptyText, { color: isDark ? '#fff' : '#0E457D' }]}>
+            Nenhum pet disponivel agora.
           </Text>
         )}
       </View>
@@ -267,7 +312,7 @@ export default function SwipeScreen() {
             {...sheetPan.panHandlers}
           >
             <ScrollView showsVerticalScrollIndicator={false}>
-              <Image source={selectedPet.image} style={styles.sheetImage} />
+              <Image source={petImageSource(selectedPet)} style={styles.sheetImage} />
 
               <View style={styles.sheetContent}>
                 <Text style={styles.sheetTitle}>{selectedPet.name}</Text>
@@ -280,6 +325,12 @@ export default function SwipeScreen() {
                 <View style={styles.section}>
                   <Text style={styles.sectionTitle}>Sobre</Text>
                   <Text>{selectedPet.description}</Text>
+                </View>
+
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Detalhes</Text>
+                  <Text>{selectedPet.idade} - {selectedPet.porte}</Text>
+                  <Text>{selectedPet.vacinado ? 'Vacinado' : 'Nao vacinado'}</Text>
                 </View>
 
                 <TouchableOpacity style={styles.actionPrimary}>
@@ -297,121 +348,128 @@ export default function SwipeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { 
-    flex: 1, 
-    marginTop: 45 
+  safeArea: {
+    flex: 1,
+    marginTop: 45
   },
 
-  header: { 
-    alignItems: 'center', 
-    paddingVertical: 30, 
-    marginTop: 20 
+  header: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    marginTop: 20
   },
 
-  logo: { 
-    width: 200, 
-    height: 90 
+  logo: {
+    width: 200,
+    height: 90
   },
 
-  mainContent: { 
-    flex: 1, 
-    alignItems: 'center', 
-    justifyContent: 'center' 
+  mainContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center'
   },
 
-  cardContainer: { 
-    width: width * 0.9, 
-    height: width * 1.2, 
-    borderRadius: 15, 
-    overflow: 'hidden' 
+  cardContainer: {
+    width: width * 0.9,
+    height: width * 1.2,
+    borderRadius: 15,
+    overflow: 'hidden'
   },
 
-  petImage: { 
-    width: '100%', 
-    height: '100%', 
+  petImage: {
+    width: '100%',
+    height: '100%',
     position: 'absolute'
-   },
+  },
 
-  infoBox: { 
+  infoBox: {
     position: 'absolute',
-    bottom: 0, 
-    padding: 15, 
-    width: '100%', 
-    backgroundColor: 'rgba(0,0,0,0.4)'
-   },
-
-  petName: { 
-    fontSize: 26, 
-    fontWeight: 'bold' 
-  },
-
-  actionButtons: { 
-    flexDirection: 'row',
-     marginTop: 20, 
-     width: width * 0.6, 
-     justifyContent: 'space-around' 
-    },
-
-  button: { 
-    width: 70, 
-    height: 70, 
-    borderRadius: 35, 
-    justifyContent: 'center', 
-    alignItems: 'center' 
-  },
-
-  skipButton: { 
-    backgroundColor: '#0E457D'
-   },
-
-  likeButton: { 
-    backgroundColor: '#FF2BAA' 
-  },
-
-  overlay: { 
-    ...StyleSheet.absoluteFillObject, 
-    backgroundColor: 'rgba(0,0,0,0.5)'
-   },
-
-  bottomSheet: { 
-    position: 'absolute', 
     bottom: 0,
-     width: '100%', 
-     height: height * 0.85, 
-     backgroundColor: '#fff',
-      borderTopLeftRadius: 20, 
-      borderTopRightRadius: 20 
-    },
-
-  sheetImage: { 
-    width: '100%', 
-    height: 250 
+    padding: 15,
+    width: '100%',
+    backgroundColor: 'rgba(0,0,0,0.4)'
   },
 
-  sheetContent: { 
-    padding: 20 
+  petName: {
+    fontSize: 26,
+    fontWeight: 'bold'
   },
 
-  sheetTitle: { 
-    fontSize: 24, 
-    fontWeight: 'bold', 
-    marginBottom: 10 
+  actionButtons: {
+    flexDirection: 'row',
+    marginTop: 20,
+    width: width * 0.6,
+    justifyContent: 'space-around'
   },
 
-  section: { 
-    marginBottom: 15
-   },
-
-  sectionTitle: { 
-    fontWeight: 'bold', 
-    marginBottom: 5 
-  },
-
-  actionPrimary: { 
-    marginTop: 20, 
-    backgroundColor: '#FF2BAA', 
-    padding: 15, 
-    borderRadius: 15, 
+  button: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
     alignItems: 'center'
-   },
+  },
+
+  skipButton: {
+    backgroundColor: '#0E457D'
+  },
+
+  likeButton: {
+    backgroundColor: '#FF2BAA'
+  },
+
+  emptyText: {
+    fontSize: 17,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)'
+  },
+
+  bottomSheet: {
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    height: height * 0.85,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20
+  },
+
+  sheetImage: {
+    width: '100%',
+    height: 250
+  },
+
+  sheetContent: {
+    padding: 20
+  },
+
+  sheetTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10
+  },
+
+  section: {
+    marginBottom: 15
+  },
+
+  sectionTitle: {
+    fontWeight: 'bold',
+    marginBottom: 5
+  },
+
+  actionPrimary: {
+    marginTop: 20,
+    backgroundColor: '#FF2BAA',
+    padding: 15,
+    borderRadius: 15,
+    alignItems: 'center'
+  },
 });
