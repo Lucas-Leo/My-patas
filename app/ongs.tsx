@@ -1,11 +1,11 @@
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
-import { AntDesign, Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useRef, useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Animated,
-  Dimensions,
   Image,
   Modal,
   Pressable,
@@ -16,92 +16,52 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
-
-const { width } = Dimensions.get('window');
+import { useFocusEffect } from '@react-navigation/native';
+import api from '../src/service/api';
+import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
-type Pet = {
-  id: string;
-  nome: string;
-  idade: string;
-  porte: string;
-  vacinado: boolean;
-  foto: any;
+type ApiOng = {
+  idong?: number;
+  id?: number;
+  nome?: string | null;
+  descricao?: string | null;
+  foto?: string | null;
+  banner?: string | null;
 };
 
 type Ong = {
-  id: string;
+  id: number;
   nome: string;
   descricao: string;
-  imagem: any;
-  pets: Pet[];
+  imagem?: string | null;
+  pets: PetApp[];
 };
-
-const ONGS = [
-  {
-    id: '1',
-    nome: 'ONG Paz e Amor',
-    descricao: 'Cuidando de animais com amor e responsabilidade.',
-    imagem: require('@/assets/images/ong01.png'),
-    pets: [
-      { id: 'p1', nome: 'Luke', idade: '2 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/cachorro01.jpg') },
-      { id: 'p2', nome: 'Mingau', idade: '3 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/gato01.jpg') }
-    ],
-  },
-  {
-    id: '2',
-    nome: 'ONG Amigo Fiel',
-    descricao: 'Promovendo adoções conscientes e felizes.',
-    imagem: require('@/assets/images/ong02.png'),
-    pets: [
-      { id: 'p3', nome: 'Princesa', idade: '2 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/cachorro02.jpg') },
-      { id: 'p4', nome: 'Salem', idade: '1 ano', porte: 'Médio', vacinado: false, foto: require('@/assets/images/gato02.jpg') }
-    ],
-  },
-  {
-    id: '3',
-    nome: 'Abrigo do Coração',
-    descricao: 'Um lar temporário para quem mais precisa.',
-    imagem: require('@/assets/images/ong03.png'),
-    pets: [
-      { id: 'p5', nome: 'Max', idade: '3 anos', porte: 'Pequeno', vacinado: true, foto: require('@/assets/images/cachorro03.jpg') },
-      { id: 'p6', nome: 'Theo', idade: '4 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/cachorro04.jpg') },
-      { id: 'p7', nome: 'Matheo', idade: '3 anos', porte: 'Grande', vacinado: true, foto: require('@/assets/images/gato03.jpg') },
-      { id: 'p8', nome: 'Guarfield', idade: '3 anos', porte: 'Pequeno', vacinado: true, foto: require('@/assets/images/gato04.jpg') }
-    ],
-  },
-  {
-    id: '4',
-    nome: 'Amigos de quatro patas',
-    descricao: 'Não compre. adote um animalzinho!',
-    imagem: require('@/assets/images/ong4.png'),
-    pets: [
-      { id: 'p9', nome: 'Dalila', idade: '3 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/cachorro05.jpg') },
-      { id: 'p10', nome: 'Kity', idade: '5 meses', porte: 'Médio', vacinado: false, foto: require('@/assets/images/gato05.jpg') }
-    ],
-  },
-  {
-    id: '5',
-    nome: 'Aumigos',
-    descricao: 'Adote um AUmigo!',
-    imagem: require('@/assets/images/ong05.png'),
-    pets: [
-      { id: 'p11', nome: 'Billy', idade: '3 anos', porte: 'Médio', vacinado: true, foto: require('@/assets/images/cachorro06.jpg') },
-      { id: 'p12', nome: 'Chicó', idade: '6 meses', porte: 'Médio', vacinado: false, foto: require('@/assets/images/gato06.jpg') }
-    ],
-  },
-];
 
 type OngCardProps = {
   ong: Ong;
   expanded: boolean;
   onPress: () => void;
-  onPetPress: (pet: Pet) => void;
+  onPetPress: (pet: PetApp) => void;
+  onToggleFavorite: (pet: PetApp) => void;
+  favoritosIds: Set<number>;
   isDark: boolean;
 };
 
-const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }: OngCardProps) => {
+function imagemSource(uri?: string | null) {
+  return uri ? { uri } : logoApp;
+}
+
+const OngCard = ({
+  ong,
+  expanded,
+  onPress,
+  onPetPress,
+  onToggleFavorite,
+  favoritosIds,
+  isDark
+}: OngCardProps) => {
   const animation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -114,7 +74,7 @@ const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }: OngCardProps) =
 
   const animatedMaxHeight = animation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, ong.pets.length * 110],
+    outputRange: [0, Math.max(90, ong.pets.length * 110)],
   });
 
   const animatedOpacity = animation.interpolate({
@@ -133,7 +93,7 @@ const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }: OngCardProps) =
       ]}
     >
       <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.cardHeader}>
-        <Image source={ong.imagem} style={styles.ongImage} resizeMode="cover" />
+        <Image source={imagemSource(ong.imagem)} style={styles.ongImage} resizeMode="cover" />
         <View style={styles.ongTextBox}>
           <Text
             style={[
@@ -176,68 +136,176 @@ const OngCard = ({ ong, expanded, onPress, onPetPress, isDark }: OngCardProps) =
             { color: isDark ? '#90CAF9' : '#0E457D' },
           ]}
         >
-          Animais disponíveis
+          Animais disponiveis
         </Text>
 
-        {ong.pets.map((pet) => (
-          <View key={pet.id} style={styles.petRow}>
-            <TouchableOpacity style={styles.petInfo} onPress={() => onPetPress(pet)}>
-              <Image source={pet.foto} style={styles.petThumb} />
-              <View style={{ marginLeft: 10 }}>
-                <Text
-                  style={[
-                    styles.petName,
-                    { color: isDark ? '#FFFFFF' : '#333' },
-                  ]}
-                >
-                  {pet.nome}
-                </Text>
-                <Text
-                  style={[
-                    styles.petDetails,
-                    { color: isDark ? '#BDBDBD' : '#555' },
-                  ]}
-                >
-                  Idade: {pet.idade} • Porte: {pet.porte}
-                </Text>
-                <Text
-                  style={[
-                    styles.petVacinado,
-                    { color: pet.vacinado ? '#4CAF50' : '#FF2BAA' },
-                  ]}
-                >
-                  {pet.vacinado ? 'Vacinado' : 'Não vacinado'}
-                </Text>
-              </View>
-            </TouchableOpacity>
+        {ong.pets.length === 0 ? (
+          <Text style={[styles.emptyText, { color: isDark ? '#BDBDBD' : '#555' }]}>
+            Nenhum pet cadastrado nesta ONG.
+          </Text>
+        ) : (
+          ong.pets.map((pet) => {
+            const favoritado = favoritosIds.has(pet.id);
 
-            <TouchableOpacity style={styles.heartButton}>
-              <Ionicons
-                name="heart-outline"
-                size={24}
-                color={isDark ? '#FF80AB' : '#FF2BAA'}
-              />
-            </TouchableOpacity>
-          </View>
-        ))}
+            return (
+              <View key={pet.id} style={styles.petRow}>
+                <TouchableOpacity style={styles.petInfo} onPress={() => onPetPress(pet)}>
+                  <Image source={imagemSource(pet.foto)} style={styles.petThumb} />
+                  <View style={{ marginLeft: 10, flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.petName,
+                        { color: isDark ? '#FFFFFF' : '#333' },
+                      ]}
+                    >
+                      {pet.nome}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.petDetails,
+                        { color: isDark ? '#BDBDBD' : '#555' },
+                      ]}
+                    >
+                      Idade: {pet.idade} - Porte: {pet.porte}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.petVacinado,
+                        { color: pet.vacinado ? '#4CAF50' : '#FF2BAA' },
+                      ]}
+                    >
+                      {pet.vacinado ? 'Vacinado' : 'Nao vacinado'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.heartButton} onPress={() => onToggleFavorite(pet)}>
+                  <Ionicons
+                    name={favoritado ? 'heart' : 'heart-outline'}
+                    size={24}
+                    color={isDark ? '#FF80AB' : '#FF2BAA'}
+                  />
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        )}
       </Animated.View>
     </View>
   );
 };
 
 export default function OngsScreen() {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [selectedPet, setSelectedPet] = useState<Pet | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [selectedPet, setSelectedPet] = useState<PetApp | null>(null);
+  const [ongs, setOngs] = useState<Ong[]>([]);
+  const [favoritosIds, setFavoritosIds] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(true);
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
+  useFocusEffect(
+    useCallback(() => {
+      carregarDados();
+    }, [])
+  );
+
+  async function carregarDados() {
+    try {
+      setLoading(true);
+
+      const [ongsResponse, petsResponse] = await Promise.all([
+        api.get('/ongs'),
+        api.get('/pets'),
+      ]);
+
+      const pets = Array.isArray(petsResponse.data)
+        ? petsResponse.data.map((pet: ApiPet) => normalizarPet(pet)).filter((pet: PetApp) => Number.isFinite(pet.id))
+        : [];
+
+      const ongsBanco = Array.isArray(ongsResponse.data) ? ongsResponse.data : [];
+
+      const ongsFormatadas = ongsBanco
+        .map((ong: ApiOng) => {
+          const id = Number(ong.idong || ong.id);
+
+          return {
+            id,
+            nome: ong.nome || 'ONG sem nome',
+            descricao: ong.descricao || 'Sem descricao cadastrada.',
+            imagem: ong.foto || ong.banner || null,
+            pets: pets.filter((pet: PetApp) => Number(pet.fk_idong) === id),
+          };
+        })
+        .filter((ong: Ong) => Number.isFinite(ong.id));
+
+      setOngs(ongsFormatadas);
+      await carregarFavoritos();
+    } catch (error) {
+      Alert.alert('Erro', 'Nao foi possivel carregar as ONGs do banco.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function carregarFavoritos() {
+    const idUsuario = await obterIdUsuarioLogado();
+
+    if (!idUsuario) {
+      setFavoritosIds(new Set());
+      return;
+    }
+
+    const favoritosResponse = await api.get(`/petsfavoritados/usuario/${idUsuario}`);
+    const ids = Array.isArray(favoritosResponse.data)
+      ? favoritosResponse.data.map((pet: ApiPet) => Number(pet.fk_idpet || pet.idpet))
+      : [];
+
+    setFavoritosIds(new Set(ids));
+  }
+
+  async function toggleFavorito(pet: PetApp) {
+    try {
+      const idUsuario = await obterIdUsuarioLogado();
+
+      if (!idUsuario) {
+        Alert.alert('Login necessario', 'Entre na sua conta para favoritar pets.');
+        return;
+      }
+
+      if (favoritosIds.has(pet.id)) {
+        await api.delete(`/petsfavoritados/usuario/${idUsuario}/pet/${pet.id}`);
+        setFavoritosIds((prev) => {
+          const atualizado = new Set(prev);
+          atualizado.delete(pet.id);
+          return atualizado;
+        });
+        return;
+      }
+
+      await api.post('/petsfavoritados', {
+        fk_idusuario: idUsuario,
+        fk_idpet: pet.id,
+      });
+
+      setFavoritosIds((prev) => {
+        const atualizado = new Set(prev);
+        atualizado.add(pet.id);
+        return atualizado;
+      });
+    } catch (error) {
+      Alert.alert('Erro', 'Nao foi possivel atualizar o favorito.');
+    }
+  }
+
   const closePetModal = () => setSelectedPet(null);
+
   const handleAdotar = () => {
-    Alert.alert('Adoção', 'Sua solicitação de adoção foi registrada!');
+    Alert.alert('Adocao', 'Sua solicitacao de adocao foi registrada!');
     closePetModal();
   };
 
-  const toggleExpand = (id: string) => {
+  const toggleExpand = (id: number) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
 
@@ -262,16 +330,26 @@ export default function OngsScreen() {
           ONGS
         </Text>
 
-        {ONGS.map((ong) => (
-          <OngCard
-            key={ong.id}
-            ong={ong}
-            expanded={expandedId === ong.id}
-            onPress={() => toggleExpand(ong.id)}
-            onPetPress={(pet) => setSelectedPet(pet)}
-            isDark={isDark}
-          />
-        ))}
+        {loading ? (
+          <ActivityIndicator size="large" color="#FF2BAA" />
+        ) : ongs.length === 0 ? (
+          <Text style={[styles.emptyListText, { color: isDark ? '#E0E0E0' : '#555' }]}>
+            Nenhuma ONG cadastrada.
+          </Text>
+        ) : (
+          ongs.map((ong) => (
+            <OngCard
+              key={ong.id}
+              ong={ong}
+              expanded={expandedId === ong.id}
+              onPress={() => toggleExpand(ong.id)}
+              onPetPress={(pet) => setSelectedPet(pet)}
+              onToggleFavorite={toggleFavorito}
+              favoritosIds={favoritosIds}
+              isDark={isDark}
+            />
+          ))
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -303,7 +381,7 @@ export default function OngsScreen() {
                     color={isDark ? '#FFFFFF' : '#111111'}
                   />
                 </TouchableOpacity>
-                <Image source={selectedPet.foto} style={styles.petImage} />
+                <Image source={imagemSource(selectedPet.foto)} style={styles.petImage} />
                 <Text
                   style={[
                     styles.modalPetName,
@@ -311,6 +389,9 @@ export default function OngsScreen() {
                   ]}
                 >
                   {selectedPet.nome}
+                </Text>
+                <Text style={[styles.modalPetDetails, { color: isDark ? '#E0E0E0' : '#555' }]}>
+                  {selectedPet.idade} - {selectedPet.porte}
                 </Text>
                 <Pressable onPress={handleAdotar} style={styles.adoptButton}>
                   <Text style={styles.adoptText}>Adotar</Text>
@@ -328,7 +409,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     marginTop: 45,
-    backgroundColor: "#ffffff",
+    backgroundColor: '#ffffff',
   },
   header: {
     alignItems: 'center',
@@ -432,6 +513,16 @@ const styles = StyleSheet.create({
   heartButton: {
     padding: 8,
   },
+  emptyText: {
+    fontSize: 14,
+    marginBottom: 14,
+  },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: 24,
+    fontSize: 16,
+    fontWeight: '600',
+  },
   modalContainer: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -454,8 +545,12 @@ const styles = StyleSheet.create({
   modalPetName: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 8,
     color: '#0E457D',
+  },
+  modalPetDetails: {
+    fontSize: 15,
+    marginBottom: 15,
   },
   closeIconButton: {
     position: 'absolute',
