@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import {
   View,
@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   SafeAreaView,
   TextInput,
-  Alert,
+  KeyboardTypeOptions,
+  Modal,
+  Animated,
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -23,6 +25,7 @@ type UsuarioPerfil = {
   dataNascimento?: string;
   telefone?: string;
   sexo?: string;
+  senha?: string;
 
   endereco?: {
     cep?: string;
@@ -56,9 +59,125 @@ const EditarUserComum = () => {
   const [numero, setNumero] = useState("");
   const [complemento, setComplemento] = useState("");
 
+  // =========================
+  // SENHA
+  // =========================
+
+  const [senhaSalva, setSenhaSalva] = useState("");
+
+  const [senhaAtual, setSenhaAtual] = useState("");
+  const [novaSenha, setNovaSenha] = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+
+  const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
+  const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
+  const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+
+  // =========================
+  // MODAL FEEDBACK
+  // =========================
+
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
+
+  const [feedbackEmoji, setFeedbackEmoji] = useState("✅");
+  const [feedbackTitle, setFeedbackTitle] = useState("");
+  const [feedbackMessage, setFeedbackMessage] = useState("");
+
+  const scaleAnim = useRef(new Animated.Value(0.7)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     carregarUsuario();
   }, []);
+
+  useEffect(() => {
+
+    if (feedbackVisible) {
+
+      scaleAnim.setValue(0.7);
+      opacityAnim.setValue(0);
+
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+
+  }, [feedbackVisible]);
+
+  // =========================
+  // MÁSCARAS
+  // =========================
+
+  function maskTelefone(value: string) {
+
+    let cleaned = value.replace(/\D/g, "");
+
+    cleaned = cleaned.slice(0, 11);
+
+    if (cleaned.length <= 2) {
+      return `(${cleaned}`;
+    }
+
+    if (cleaned.length <= 7) {
+      return cleaned.replace(
+        /^(\d{2})(\d+)/,
+        "($1) $2"
+      );
+    }
+
+    return cleaned.replace(
+      /^(\d{2})(\d{5})(\d+)/,
+      "($1) $2-$3"
+    );
+  }
+
+  function maskCPF(value: string) {
+
+    let cleaned = value.replace(/\D/g, "");
+
+    cleaned = cleaned.slice(0, 11);
+
+    return cleaned
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+  }
+
+  function maskCEP(value: string) {
+
+    let cleaned = value.replace(/\D/g, "");
+
+    cleaned = cleaned.slice(0, 8);
+
+    return cleaned.replace(
+      /^(\d{5})(\d)/,
+      "$1-$2"
+    );
+  }
+
+  function maskDataNascimento(value: string) {
+
+    let cleaned = value.replace(/\D/g, "");
+
+    cleaned = cleaned.slice(0, 8);
+
+    return cleaned
+      .replace(/^(\d{2})(\d)/, "$1/$2")
+      .replace(/^(\d{2})\/(\d{2})(\d)/, "$1/$2/$3");
+  }
+
+  // =========================
+  // CARREGAR USUÁRIO
+  // =========================
 
   async function carregarUsuario() {
 
@@ -70,12 +189,29 @@ const EditarUserComum = () => {
 
     setNome(usuario.nome || "");
     setEmail(usuario.email || "");
-    setCpf(usuario.cpf || "");
-    setDataNascimento(usuario.dataNascimento || "");
-    setTelefone(usuario.telefone || "");
+
+    setCpf(
+      maskCPF(usuario.cpf || "")
+    );
+
+    setDataNascimento(
+      maskDataNascimento(
+        usuario.dataNascimento || ""
+      )
+    );
+
+    setTelefone(
+      maskTelefone(usuario.telefone || "")
+    );
+
     setSexo(usuario.sexo || "");
 
-    setCep(usuario.endereco?.cep || "");
+    setSenhaSalva(usuario.senha || "");
+
+    setCep(
+      maskCEP(usuario.endereco?.cep || "")
+    );
+
     setCidade(usuario.endereco?.cidade || "");
     setBairro(usuario.endereco?.bairro || "");
     setRua(usuario.endereco?.rua || "");
@@ -83,16 +219,24 @@ const EditarUserComum = () => {
     setComplemento(usuario.endereco?.complemento || "");
   }
 
+  // =========================
+  // BUSCAR CEP
+  // =========================
+
   async function buscarCep(valorCep: string) {
 
-    setCep(valorCep);
+    const cepFormatado = maskCEP(valorCep);
 
-    if (valorCep.length < 8) return;
+    setCep(cepFormatado);
+
+    const cepLimpo = valorCep.replace(/\D/g, "");
+
+    if (cepLimpo.length < 8) return;
 
     try {
 
       const response = await fetch(
-        `https://viacep.com.br/ws/${valorCep}/json/`
+        `https://viacep.com.br/ws/${cepLimpo}/json/`
       );
 
       const data = await response.json();
@@ -103,14 +247,79 @@ const EditarUserComum = () => {
 
     } catch (error) {
 
-      Alert.alert(
-        "Erro",
+      setFeedbackEmoji("⚠️");
+
+      setFeedbackTitle("Erro");
+
+      setFeedbackMessage(
         "Não foi possível buscar o CEP."
       );
+
+      setFeedbackVisible(true);
     }
   }
 
+  // =========================
+  // SALVAR ALTERAÇÕES
+  // =========================
+
   async function salvarAlteracoes() {
+
+    // =========================
+    // VALIDAÇÃO SENHA
+    // =========================
+
+    if (
+      senhaAtual ||
+      novaSenha ||
+      confirmarSenha
+    ) {
+
+      if (senhaAtual !== senhaSalva) {
+
+        setFeedbackEmoji("🔒");
+
+        setFeedbackTitle("Senha incorreta");
+
+        setFeedbackMessage(
+          "A senha atual informada está incorreta."
+        );
+
+        setFeedbackVisible(true);
+
+        return;
+      }
+
+      if (novaSenha.length < 6) {
+
+        setFeedbackEmoji("⚠️");
+
+        setFeedbackTitle("Senha inválida");
+
+        setFeedbackMessage(
+          "A nova senha deve ter pelo menos 6 caracteres."
+        );
+
+        setFeedbackVisible(true);
+
+        return;
+      }
+
+      if (novaSenha !== confirmarSenha) {
+
+        setFeedbackEmoji("❌");
+
+        setFeedbackTitle("Senhas diferentes");
+
+        setFeedbackMessage(
+          "A confirmação da senha não confere."
+        );
+
+        setFeedbackVisible(true);
+
+        return;
+      }
+    }
 
     const usuarioAtualizado = {
 
@@ -120,6 +329,10 @@ const EditarUserComum = () => {
       dataNascimento,
       telefone,
       sexo,
+
+      senha: novaSenha
+        ? novaSenha
+        : senhaSalva,
 
       endereco: {
         cep,
@@ -136,12 +349,15 @@ const EditarUserComum = () => {
       JSON.stringify(usuarioAtualizado)
     );
 
-    Alert.alert(
-      "Sucesso",
-      "Perfil atualizado com sucesso."
+    setFeedbackEmoji("✅");
+
+    setFeedbackTitle("Perfil atualizado");
+
+    setFeedbackMessage(
+      "Suas alterações foram salvas com sucesso."
     );
 
-    router.back();
+    setFeedbackVisible(true);
   }
 
   return (
@@ -156,6 +372,87 @@ const EditarUserComum = () => {
         }
       ]}
     >
+
+      {/* MODAL SUCESSO */}
+
+      <Modal
+        transparent
+        animationType="fade"
+        visible={feedbackVisible}
+      >
+
+        <View style={styles.modalOverlay}>
+
+          <Animated.View
+            style={[
+              styles.feedbackContainer,
+              {
+                backgroundColor: isDark
+                  ? "#1E1E1E"
+                  : "#FFFFFF",
+
+                opacity: opacityAnim,
+                transform: [{ scale: scaleAnim }],
+              }
+            ]}
+          >
+
+            <Text style={styles.feedbackEmoji}>
+              {feedbackEmoji}
+            </Text>
+
+            <Text
+              style={[
+                styles.feedbackTitle,
+                {
+                  color: isDark
+                    ? "#FFFFFF"
+                    : "#0E457D"
+                }
+              ]}
+            >
+              {feedbackTitle}
+            </Text>
+
+            <Text
+              style={[
+                styles.feedbackMessage,
+                {
+                  color: isDark
+                    ? "#CCCCCC"
+                    : "#555555"
+                }
+              ]}
+            >
+              {feedbackMessage}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.feedbackButton}
+              onPress={() => {
+
+                setFeedbackVisible(false);
+
+                if (
+                  feedbackTitle ===
+                  "Perfil atualizado"
+                ) {
+                  router.back();
+                }
+              }}
+            >
+
+              <Text style={styles.feedbackButtonText}>
+                Entendi
+              </Text>
+
+            </TouchableOpacity>
+
+          </Animated.View>
+
+        </View>
+
+      </Modal>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -223,27 +520,111 @@ const EditarUserComum = () => {
             value={email}
             onChangeText={setEmail}
             isDark={isDark}
+            keyboardType="email-address"
           />
 
           <Input
             label="CPF"
             value={cpf}
-            onChangeText={setCpf}
+            onChangeText={(text) =>
+              setCpf(maskCPF(text))
+            }
             isDark={isDark}
+            keyboardType="numeric"
           />
 
           <Input
             label="Data de nascimento"
             value={dataNascimento}
-            onChangeText={setDataNascimento}
+            onChangeText={(text) =>
+              setDataNascimento(
+                maskDataNascimento(text)
+              )
+            }
             isDark={isDark}
+            keyboardType="numeric"
           />
 
           <Input
             label="Telefone"
             value={telefone}
-            onChangeText={setTelefone}
+            onChangeText={(text) =>
+              setTelefone(
+                maskTelefone(text)
+              )
+            }
             isDark={isDark}
+            keyboardType="numeric"
+          />
+
+        </View>
+
+        {/* ALTERAR SENHA */}
+
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
+        >
+
+          <Text
+            style={[
+              styles.sectionTitle,
+              {
+                color: isDark
+                  ? "#FFFFFF"
+                  : "#0E457D"
+              }
+            ]}
+          >
+            Alterar senha
+          </Text>
+
+          <PasswordInput
+            label="Senha atual"
+            value={senhaAtual}
+            onChangeText={setSenhaAtual}
+            isDark={isDark}
+            secureTextEntry={!mostrarSenhaAtual}
+            onToggleVisibility={() =>
+              setMostrarSenhaAtual(
+                !mostrarSenhaAtual
+              )
+            }
+            visible={mostrarSenhaAtual}
+          />
+
+          <PasswordInput
+            label="Nova senha"
+            value={novaSenha}
+            onChangeText={setNovaSenha}
+            isDark={isDark}
+            secureTextEntry={!mostrarNovaSenha}
+            onToggleVisibility={() =>
+              setMostrarNovaSenha(
+                !mostrarNovaSenha
+              )
+            }
+            visible={mostrarNovaSenha}
+          />
+
+          <PasswordInput
+            label="Confirmar nova senha"
+            value={confirmarSenha}
+            onChangeText={setConfirmarSenha}
+            isDark={isDark}
+            secureTextEntry={!mostrarConfirmarSenha}
+            onToggleVisibility={() =>
+              setMostrarConfirmarSenha(
+                !mostrarConfirmarSenha
+              )
+            }
+            visible={mostrarConfirmarSenha}
           />
 
         </View>
@@ -279,6 +660,7 @@ const EditarUserComum = () => {
             value={cep}
             onChangeText={buscarCep}
             isDark={isDark}
+            keyboardType="numeric"
           />
 
           <Input
@@ -307,6 +689,7 @@ const EditarUserComum = () => {
             value={numero}
             onChangeText={setNumero}
             isDark={isDark}
+            keyboardType="numeric"
           />
 
           <Input
@@ -348,13 +731,15 @@ type InputProps = {
   value: string;
   onChangeText: (text: string) => void;
   isDark: boolean;
+  keyboardType?: KeyboardTypeOptions;
 };
 
 const Input = ({
   label,
   value,
   onChangeText,
-  isDark
+  isDark,
+  keyboardType = "default"
 }: InputProps) => {
 
   return (
@@ -377,6 +762,7 @@ const Input = ({
       <TextInput
         value={value}
         onChangeText={onChangeText}
+        keyboardType={keyboardType}
         style={[
           styles.input,
           {
@@ -392,6 +778,92 @@ const Input = ({
         placeholder={label}
         placeholderTextColor="#999"
       />
+
+    </View>
+  );
+};
+
+type PasswordInputProps = {
+  label: string;
+  value: string;
+  onChangeText: (text: string) => void;
+  isDark: boolean;
+  secureTextEntry: boolean;
+  onToggleVisibility: () => void;
+  visible: boolean;
+};
+
+const PasswordInput = ({
+  label,
+  value,
+  onChangeText,
+  isDark,
+  secureTextEntry,
+  onToggleVisibility,
+  visible,
+}: PasswordInputProps) => {
+
+  return (
+
+    <View style={styles.inputContainer}>
+
+      <Text
+        style={[
+          styles.inputLabel,
+          {
+            color: isDark
+              ? "#BBBBBB"
+              : "#666666"
+          }
+        ]}
+      >
+        {label}
+      </Text>
+
+      <View
+        style={[
+          styles.passwordContainer,
+          {
+            backgroundColor: isDark
+              ? "#2A2A2A"
+              : "#F1F5F4",
+          }
+        ]}
+      >
+
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          style={[
+            styles.passwordInput,
+            {
+              color: isDark
+                ? "#FFFFFF"
+                : "#000000"
+            }
+          ]}
+          placeholder={label}
+          placeholderTextColor="#999"
+        />
+
+        <TouchableOpacity
+          onPress={onToggleVisibility}
+        >
+
+          <Icon
+            name={
+              visible
+                ? "eye-off-outline"
+                : "eye-outline"
+            }
+            size={22}
+            color="#999"
+          />
+
+        </TouchableOpacity>
+
+      </View>
 
     </View>
   );
@@ -423,6 +895,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF42B3",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 30,
   },
 
   headerTitle: {
@@ -430,6 +903,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#0E457D",
     marginLeft: 18,
+    marginTop: 25,
   },
 
   card: {
@@ -467,6 +941,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 
+  passwordContainer: {
+    width: "100%",
+    height: 56,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+
   saveButton: {
     width: "90%",
     height: 60,
@@ -483,6 +972,55 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 17,
     fontWeight: "bold",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 30,
+  },
+
+  feedbackContainer: {
+    width: "100%",
+    borderRadius: 25,
+    padding: 30,
+    alignItems: "center",
+  },
+
+  feedbackEmoji: {
+    fontSize: 55,
+  },
+
+  feedbackTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 15,
+    textAlign: "center",
+  },
+
+  feedbackMessage: {
+    fontSize: 16,
+    textAlign: "center",
+    marginTop: 15,
+    lineHeight: 24,
+  },
+
+  feedbackButton: {
+    backgroundColor: "#FF42B3",
+    width: "100%",
+    height: 55,
+    borderRadius: 16,
+    marginTop: 25,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  feedbackButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "bold",
+    fontSize: 18,
   },
 
 });

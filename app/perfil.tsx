@@ -45,7 +45,6 @@ const ProfileScreen = () => {
   const [email, setEmail] = useState("");
   const [telefone, setTelefone] = useState("");
   const [cidade, setCidade] = useState("");
-  const [senha, setSenha] = useState("");
 
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
@@ -142,7 +141,7 @@ const ProfileScreen = () => {
     const resultado =
       await ImagePicker.launchImageLibraryAsync({
 
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
 
         allowsEditing: true,
 
@@ -188,7 +187,7 @@ const ProfileScreen = () => {
 
     const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
-    if (!usuarioSalvo || field === "senha") {
+    if (!usuarioSalvo) {
       return;
     }
 
@@ -229,10 +228,6 @@ const ProfileScreen = () => {
 
       case "cidade":
         setCidade(tempValue);
-        break;
-
-      case "senha":
-        setSenha(tempValue);
         break;
     }
 
@@ -342,9 +337,6 @@ const ProfileScreen = () => {
       case "cidade":
         return "Editar cidade";
 
-      case "senha":
-        return "Alterar senha";
-
       default:
         return "";
     }
@@ -410,7 +402,6 @@ const ProfileScreen = () => {
                     : "#000000"
                 }
               ]}
-              secureTextEntry={editingField === "senha"}
             />
 
             <View style={styles.modalButtons}>
@@ -664,7 +655,6 @@ const ProfileScreen = () => {
             { label: "E-mail", value: email, field: "email" },
             { label: "Telefone", value: telefone, field: "telefone" },
             { label: "Cidade", value: cidade, field: "cidade" },
-            { label: "Senha", value: "••••••••••", field: "senha" },
           ].map((item, index) => (
 
             <View key={index}>
@@ -718,7 +708,7 @@ const ProfileScreen = () => {
               </View>
 
               {
-                index !== 4 &&
+                index !== 3 &&
                 <View style={styles.divider} />
               }
 
@@ -727,8 +717,6 @@ const ProfileScreen = () => {
           ))}
 
         </View>
-
-        {/* NOVA ÁREA - EDITAR PERFIL COMPLETO */}
 
         <TouchableOpacity
           style={[
@@ -739,7 +727,7 @@ const ProfileScreen = () => {
                 : "#FFFFFF"
             }
           ]}
-          onPress={() => router.push("/editaruserComum")} 
+          onPress={() => router.push("/editaruserComum")}
           activeOpacity={0.8}
         >
 
@@ -780,7 +768,7 @@ const ProfileScreen = () => {
                   }
                 ]}
               >
-                Acesse endereço, segurança e outros dados
+                Acesse endereço e outros dados
               </Text>
 
             </View>
@@ -1038,8 +1026,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#EAEAEA",
     marginVertical: 18,
   },
-
-  /* NOVOS ESTILOS */
 
   fullEditCard: {
     width: "90%",
