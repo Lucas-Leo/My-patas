@@ -178,10 +178,7 @@ const ProfileScreen = () => {
       setEmail(usuarioBanco.email || "");
       setTelefone(usuarioBanco.telefone || "");
       setCidade(usuarioBanco.endereco?.cidade || "");
-
-      if (usuarioBanco.foto) {
-        setFotoPerfil(usuarioBanco.foto);
-      }
+      setFotoPerfil(usuarioBanco.foto || null);
     } catch (error) {
       setFeedbackEmoji("!");
       setFeedbackTitle("Erro ao carregar perfil");
@@ -189,6 +186,18 @@ const ProfileScreen = () => {
       setFeedbackAction("save");
       setFeedbackVisible(true);
     }
+  }
+
+  function montarArquivoFoto(uri: string) {
+    const nomeArquivo = uri.split("/").pop() || `perfil-${Date.now()}.jpg`;
+    const extensao = nomeArquivo.split(".").pop()?.toLowerCase();
+    const tipoArquivo = extensao === "png" ? "image/png" : "image/jpeg";
+
+    return {
+      uri,
+      name: nomeArquivo,
+      type: tipoArquivo,
+    };
   }
 
   async function alterarFotoPerfil() {
@@ -231,24 +240,52 @@ const ProfileScreen = () => {
 
     const novaFoto = resultado.assets[0].uri;
 
-    setFotoPerfil(novaFoto);
+    try {
+      const idUsuario = obterIdUsuario() || await obterIdUsuarioLogado();
 
-    await AsyncStorage.setItem(
-      "fotoPerfil",
-      novaFoto
-    );
+      if (!idUsuario) {
+        throw new Error("Usuario nao encontrado.");
+      }
 
-    setFeedbackEmoji("🖼️");
+      const formData = new FormData();
 
-    setFeedbackTitle("Foto atualizada");
+      formData.append(
+        "foto",
+        montarArquivoFoto(novaFoto) as unknown as Blob
+      );
 
-    setFeedbackMessage(
-      "Sua foto de perfil foi alterada com sucesso."
-    );
+      const response = await api.patch(
+        `/usuarios/foto/${idUsuario}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
 
-    setFeedbackAction("save");
+      setFotoPerfil(response.data?.path || novaFoto);
+      await carregarUsuario();
 
-    setFeedbackVisible(true);
+      setFeedbackEmoji("OK");
+
+      setFeedbackTitle("Foto atualizada");
+
+      setFeedbackMessage(
+        "Sua foto de perfil foi alterada com sucesso."
+      );
+
+      setFeedbackAction("save");
+
+      setFeedbackVisible(true);
+    } catch (error) {
+      setFeedbackEmoji("!");
+      setFeedbackTitle("Erro ao salvar foto");
+      setFeedbackMessage(obterMensagemErro(error));
+      setFeedbackAction("save");
+      setFeedbackVisible(true);
+    }
+
   }
 
   function openEditModal(field: string, currentValue: string) {
