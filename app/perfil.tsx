@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   View,
@@ -15,8 +15,11 @@ import {
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from "../src/service/api";
+import axios from "axios";
 import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { useRouter } from "expo-router";
+import { useFocusEffect } from '@react-navigation/native';
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,11 +28,33 @@ const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 type UsuarioPerfil = {
+  id?: number;
+  idusuario?: number;
   nome?: string;
   email?: string;
   telefone?: string | null;
+  cpf?: string | null;
+  data_nasc?: string | null;
+  foto?: string | null;
+  fk_idsexo?: number | null;
+  fk_idendereco?: number | null;
+  fk_idtipo?: number | null;
+  sexo?: string | {
+    id?: number | null;
+    descricao?: string | null;
+  };
+  estado?: {
+    id?: number | null;
+    sigla?: string | null;
+  };
   endereco?: {
-    cidade?: string;
+    estado?: string | null;
+    cep?: string | null;
+    cidade?: string | null;
+    bairro?: string | null;
+    rua?: string | null;
+    numero?: string | null;
+    complemento?: string | null;
   };
 };
 
@@ -46,6 +71,7 @@ const ProfileScreen = () => {
   const [telefone, setTelefone] = useState("");
   const [cidade, setCidade] = useState("");
   const [senha, setSenha] = useState("");
+  const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
 
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
@@ -67,9 +93,11 @@ const ProfileScreen = () => {
   const scaleAnim = useRef(new Animated.Value(0.7)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
-    carregarUsuario();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      carregarUsuario();
+    }, [])
+  );
 
   useEffect(() => {
 
@@ -95,25 +123,71 @@ const ProfileScreen = () => {
 
   }, [feedbackVisible]);
 
-  async function carregarUsuario() {
+  async function obterIdUsuarioLogado() {
 
+    // Usa o armazenamento local apenas para pegar o id da sessao.
     const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
     if (!usuarioSalvo) {
-      return;
+      return null;
     }
 
-    const usuario = JSON.parse(usuarioSalvo) as UsuarioPerfil;
+    const usuarioLocal = JSON.parse(usuarioSalvo) as UsuarioPerfil;
 
-    setNome(usuario.nome || "");
-    setEmail(usuario.email || "");
-    setTelefone(usuario.telefone || "");
-    setCidade(usuario.endereco?.cidade || "");
+    return usuarioLocal.id || usuarioLocal.idusuario || null;
+  }
 
-    const fotoSalva = await AsyncStorage.getItem("fotoPerfil");
+  function obterMensagemErro(error: unknown) {
+    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
+      return (
+        error.response?.data?.erro ||
+        error.response?.data?.message ||
+        error.message
+      );
+    }
 
-    if (fotoSalva) {
-      setFotoPerfil(fotoSalva);
+    if (error instanceof Error) {
+      return error.message;
+    }
+
+    return "Nao foi possivel atualizar o perfil.";
+  }
+
+  function obterIdUsuario() {
+    return usuario?.id || usuario?.idusuario;
+  }
+
+  async function carregarUsuario() {
+
+    try {
+      const idUsuario = await obterIdUsuarioLogado();
+
+      if (!idUsuario) {
+        return;
+      }
+
+      const response = await api.get(`/usuarios/perfil-comum/${idUsuario}`);
+      const usuarioBanco = response.data?.data as UsuarioPerfil;
+
+      if (!usuarioBanco) {
+        return;
+      }
+
+      setUsuario(usuarioBanco);
+      setNome(usuarioBanco.nome || "");
+      setEmail(usuarioBanco.email || "");
+      setTelefone(usuarioBanco.telefone || "");
+      setCidade(usuarioBanco.endereco?.cidade || "");
+
+      if (usuarioBanco.foto) {
+        setFotoPerfil(usuarioBanco.foto);
+      }
+    } catch (error) {
+      setFeedbackEmoji("!");
+      setFeedbackTitle("Erro ao carregar perfil");
+      setFeedbackMessage(obterMensagemErro(error));
+      setFeedbackAction("save");
+      setFeedbackVisible(true);
     }
   }
 
@@ -180,82 +254,85 @@ const ProfileScreen = () => {
   function openEditModal(field: string, currentValue: string) {
 
     setEditingField(field);
-    setTempValue(currentValue);
+    setTempValue(field === "senha" ? "" : currentValue);
     setModalVisible(true);
   }
 
-  async function atualizarUsuarioSalvo(field: string, value: string) {
-
-    const usuarioSalvo = await AsyncStorage.getItem("usuario");
-
-    if (!usuarioSalvo || field === "senha") {
-      return;
-    }
-
-    const usuario = JSON.parse(usuarioSalvo);
-
+  function montarBodyEdicaoPerfil(field: string, value: string) {
     if (field === "cidade") {
-
-      usuario.endereco = {
-        ...usuario.endereco,
-        cidade: value,
+      return {
+        endereco: {
+          estado: usuario?.endereco?.estado || usuario?.estado?.sigla,
+          cep: usuario?.endereco?.cep,
+          cidade: value,
+          bairro: usuario?.endereco?.bairro,
+          rua: usuario?.endereco?.rua,
+          numero: usuario?.endereco?.numero,
+          complemento: usuario?.endereco?.complemento || "",
+        },
       };
-
-    } else {
-      usuario[field] = value;
     }
 
-    await AsyncStorage.setItem(
-      "usuario",
-      JSON.stringify(usuario)
-    );
+    return {
+      [field]: value,
+    };
   }
 
   async function saveEdit() {
 
-    switch (editingField) {
+    try {
+      if (editingField === "senha") {
+        if (!tempValue.trim()) {
+          throw new Error("Informe a nova senha.");
+        }
 
-      case "nome":
-        setNome(tempValue);
-        break;
+        await api.post("/usuarios/alterar-senha", {
+          email,
+          novaSenha: tempValue,
+        });
 
-      case "email":
-        setEmail(tempValue);
-        break;
+        setSenha("");
+      } else {
+        const idUsuario = obterIdUsuario();
 
-      case "telefone":
-        setTelefone(tempValue);
-        break;
+        if (!idUsuario) {
+          throw new Error("Usuario nao encontrado.");
+        }
 
-      case "cidade":
-        setCidade(tempValue);
-        break;
+        const response = await api.put(
+          `/usuarios/editar-comum/${idUsuario}`,
+          montarBodyEdicaoPerfil(editingField, tempValue)
+        );
 
-      case "senha":
-        setSenha(tempValue);
-        break;
+        if (response.data?.success === false) {
+          throw new Error(response.data.message || "Nao foi possivel atualizar o perfil.");
+        }
+      }
+
+      await carregarUsuario();
+
+      setModalVisible(false);
+
+      setFeedbackEmoji("OK");
+
+      setFeedbackTitle(
+        "Alteracoes salvas"
+      );
+
+      setFeedbackMessage(
+        "Suas informacoes foram atualizadas com sucesso."
+      );
+
+      setFeedbackAction("save");
+
+      setFeedbackVisible(true);
+    } catch (error) {
+      setFeedbackEmoji("!");
+      setFeedbackTitle("Erro ao salvar");
+      setFeedbackMessage(obterMensagemErro(error));
+      setFeedbackAction("save");
+      setFeedbackVisible(true);
     }
-
-    await atualizarUsuarioSalvo(
-      editingField,
-      tempValue
-    );
-
-    setModalVisible(false);
-
-    setFeedbackEmoji("✅");
-
-    setFeedbackTitle(
-      "Alterações salvas"
-    );
-
-    setFeedbackMessage(
-      "Suas informações foram atualizadas com sucesso."
-    );
-
-    setFeedbackAction("save");
-
-    setFeedbackVisible(true);
   }
 
   async function logout() {

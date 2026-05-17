@@ -12,19 +12,36 @@ import {
 } from "react-native";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../src/service/api";
+import axios from "axios";
 import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useThemeContext } from "@/context/ThemeContext";
 
 type UsuarioPerfil = {
+  id?: number;
+  idusuario?: number;
   nome?: string;
   email?: string;
   cpf?: string;
   dataNascimento?: string;
+  data_nasc?: string;
   telefone?: string;
-  sexo?: string;
+  fk_idsexo?: number | null;
+  fk_idendereco?: number | null;
+  fk_idtipo?: number | null;
+  foto?: string | null;
+  sexo?: string | {
+    id?: number;
+    descricao?: string;
+  };
+  estado?: {
+    id?: number;
+    sigla?: string;
+  };
 
   endereco?: {
+    estado?: string;
     cep?: string;
     cidade?: string;
     bairro?: string;
@@ -55,44 +72,94 @@ const EditarUserComum = () => {
   const [rua, setRua] = useState("");
   const [numero, setNumero] = useState("");
   const [complemento, setComplemento] = useState("");
+  const [estado, setEstado] = useState("");
+  const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
 
   useEffect(() => {
     carregarUsuario();
   }, []);
 
-  async function carregarUsuario() {
+  async function obterIdUsuarioLogado() {
 
+    // Usa o armazenamento local apenas para pegar o id da sessao.
     const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
-    if (!usuarioSalvo) return;
+    if (!usuarioSalvo) return null;
 
-    const usuario = JSON.parse(usuarioSalvo) as UsuarioPerfil;
+    const usuarioLocal = JSON.parse(usuarioSalvo) as UsuarioPerfil;
 
-    setNome(usuario.nome || "");
-    setEmail(usuario.email || "");
-    setCpf(usuario.cpf || "");
-    setDataNascimento(usuario.dataNascimento || "");
-    setTelefone(usuario.telefone || "");
-    setSexo(usuario.sexo || "");
+    return usuarioLocal.id || usuarioLocal.idusuario || null;
+  }
 
-    setCep(usuario.endereco?.cep || "");
-    setCidade(usuario.endereco?.cidade || "");
-    setBairro(usuario.endereco?.bairro || "");
-    setRua(usuario.endereco?.rua || "");
-    setNumero(usuario.endereco?.numero || "");
-    setComplemento(usuario.endereco?.complemento || "");
+  function formatarDataParaTela(data?: string) {
+    if (!data) {
+      return "";
+    }
+
+    const dataLimpa = data.slice(0, 10);
+
+    if (!dataLimpa.includes("-")) {
+      return data;
+    }
+
+    const [ano, mes, dia] = dataLimpa.split("-");
+
+    if (!ano || !mes || !dia) {
+      return dataLimpa;
+    }
+
+    return `${dia}/${mes}/${ano}`;
+  }
+
+  async function carregarUsuario() {
+
+    try {
+      const idUsuario = await obterIdUsuarioLogado();
+
+      if (!idUsuario) return;
+
+      const response = await api.get(`/usuarios/perfil-comum/${idUsuario}`);
+      const usuario = response.data?.data as UsuarioPerfil;
+
+      if (!usuario) return;
+
+      setUsuario(usuario);
+
+      setNome(usuario.nome || "");
+      setEmail(usuario.email || "");
+      setCpf(usuario.cpf?.startsWith("$2") ? "" : usuario.cpf || "");
+      setDataNascimento(formatarDataParaTela(usuario.dataNascimento || usuario.data_nasc));
+      setTelefone(usuario.telefone || "");
+      setSexo(
+        typeof usuario.sexo === "string"
+          ? usuario.sexo
+          : usuario.sexo?.descricao || ""
+      );
+
+      setEstado(usuario.endereco?.estado || usuario.estado?.sigla || "");
+      setCep(usuario.endereco?.cep || "");
+      setCidade(usuario.endereco?.cidade || "");
+      setBairro(usuario.endereco?.bairro || "");
+      setRua(usuario.endereco?.rua || "");
+      setNumero(usuario.endereco?.numero || "");
+      setComplemento(usuario.endereco?.complemento || "");
+    } catch (error) {
+      Alert.alert("Erro", obterMensagemErro(error));
+    }
   }
 
   async function buscarCep(valorCep: string) {
 
     setCep(valorCep);
 
-    if (valorCep.length < 8) return;
+    const cepLimpo = valorCep.replace(/\D/g, "");
+
+    if (cepLimpo.length < 8) return;
 
     try {
 
       const response = await fetch(
-        `https://viacep.com.br/ws/${valorCep}/json/`
+        `https://viacep.com.br/ws/${cepLimpo}/json/`
       );
 
       const data = await response.json();
@@ -100,6 +167,7 @@ const EditarUserComum = () => {
       setCidade(data.localidade || "");
       setBairro(data.bairro || "");
       setRua(data.logradouro || "");
+      setEstado(data.uf || "");
 
     } catch (error) {
 
@@ -110,38 +178,109 @@ const EditarUserComum = () => {
     }
   }
 
-  async function salvarAlteracoes() {
+  function obterMensagemErro(error: unknown) {
+    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
+      return (
+        error.response?.data?.erro ||
+        error.response?.data?.message ||
+        error.message
+      );
+    }
 
-    const usuarioAtualizado = {
+    if (error instanceof Error) {
+      return error.message;
+    }
 
-      nome,
-      email,
-      cpf,
-      dataNascimento,
-      telefone,
-      sexo,
+    return "Nao foi possivel atualizar o perfil.";
+  }
 
-      endereco: {
-        cep,
-        cidade,
-        bairro,
-        rua,
-        numero,
-        complemento,
-      },
+  function obterIdUsuario() {
+    return usuario?.id || usuario?.idusuario;
+  }
+
+  function obterIdSexo() {
+    if (usuario?.fk_idsexo) {
+      return usuario.fk_idsexo;
+    }
+
+    if (typeof usuario?.sexo === "object" && usuario.sexo?.id) {
+      return usuario.sexo.id;
+    }
+
+    const sexoMap: Record<string, number> = {
+      Masculino: 1,
+      Feminino: 2,
+      "Prefiro nÃ£o dizer": 3,
+      "Prefiro não dizer": 3,
     };
 
-    await AsyncStorage.setItem(
-      "usuario",
-      JSON.stringify(usuarioAtualizado)
-    );
+    return sexoMap[sexo] || null;
+  }
 
-    Alert.alert(
-      "Sucesso",
-      "Perfil atualizado com sucesso."
-    );
+  function formatarDataParaApi(data: string) {
+    if (!data) {
+      return undefined;
+    }
 
-    router.back();
+    if (data.includes("-")) {
+      return data.slice(0, 10);
+    }
+
+    const [dia, mes, ano] = data.split("/");
+
+    if (!dia || !mes || !ano) {
+      return data;
+    }
+
+    return `${ano}-${mes.padStart(2, "0")}-${dia.padStart(2, "0")}`;
+  }
+
+  async function salvarAlteracoes() {
+
+    try {
+      const idUsuario = obterIdUsuario();
+
+      if (!idUsuario) {
+        Alert.alert("Erro", "UsuÃ¡rio nÃ£o encontrado.");
+        return;
+      }
+
+      const body = {
+        nome,
+        email,
+        telefone,
+        fk_idsexo: obterIdSexo(),
+        data_nasc: formatarDataParaApi(dataNascimento),
+        ...(cpf ? { cpf } : {}),
+        endereco: {
+          estado,
+          cep,
+          cidade,
+          bairro,
+          rua,
+          numero,
+          complemento,
+        },
+      };
+
+      const response = await api.put(`/usuarios/editar-comum/${idUsuario}`, body);
+
+      if (response.data?.success === false) {
+        throw new Error(response.data.message || "Nao foi possivel atualizar o perfil.");
+      }
+
+      Alert.alert(
+        "Sucesso",
+        "Perfil atualizado com sucesso."
+      );
+
+      router.back();
+    } catch (error) {
+      Alert.alert(
+        "Erro",
+        obterMensagemErro(error)
+      );
+    }
   }
 
   return (
