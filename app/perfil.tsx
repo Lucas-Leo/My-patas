@@ -727,6 +727,78 @@ const ProfileScreen = () => {
                 : "#FFFFFF"
             }
           ]}
+          onPress={() => router.push("/acompanharAdocao")}
+          activeOpacity={0.8}
+        >
+
+          <View style={styles.fullEditLeft}>
+
+            <View
+              style={[
+                styles.fullEditIconContainer,
+                {
+                  backgroundColor: "#0E457D"
+                }
+              ]}
+            >
+
+              <Icon
+                name="paw-outline"
+                size={26}
+                color="#FFFFFF"
+              />
+
+            </View>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fullEditTitle,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#0E457D"
+                  }
+                ]}
+              >
+                Minhas solicitações de adoção
+              </Text>
+
+              <Text
+                style={[
+                  styles.fullEditSubtitle,
+                  {
+                    color: isDark
+                      ? "#BBBBBB"
+                      : "#666666"
+                  }
+                ]}
+              >
+                Acompanhe o andamento das adoções
+              </Text>
+
+            </View>
+
+          </View>
+
+          <Icon
+            name="chevron-right"
+            size={28}
+            color="#999"
+          />
+
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.fullEditCard,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
           onPress={() => router.push("/editaruserComum")}
           activeOpacity={0.8}
         >

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-
 import {
   View,
   Text,
@@ -11,17 +10,13 @@ import {
   FlatList,
   Modal,
 } from 'react-native';
-
 import { Ionicons } from '@expo/vector-icons';
-
 import { useThemeContext } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
 
 export default function MyAdoptions() {
   const router = useRouter();
-
   const { theme } = useThemeContext();
-
   const isDark = theme === 'dark';
 
   // MOCK API
@@ -37,7 +32,6 @@ export default function MyAdoptions() {
       icon: 'time-outline',
       image: require('@/assets/images/cachorro01.jpg'),
     },
-
     {
       id: '2',
       petName: 'Mia',
@@ -49,7 +43,6 @@ export default function MyAdoptions() {
       icon: 'calendar-outline',
       image: require('@/assets/images/gato01.jpg'),
     },
-
     {
       id: '3',
       petName: 'Thor',
@@ -63,63 +56,57 @@ export default function MyAdoptions() {
     },
   ]);
 
-  const [selectedAdoption, setSelectedAdoption] =
-    useState<any>(null);
+  const [selectedAdoption, setSelectedAdoption] = useState<any>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-  const [showDetailsModal, setShowDetailsModal] =
-    useState(false);
+  // TIMELINE DINÂMICA
+  const getAdoptionSteps = (currentStatus: string) => {
+    // Definimos a hierarquia de status para saber até qual passo preencher
+    let currentIndex = 0;
+    if (currentStatus === 'Em análise') currentIndex = 1;
+    if (currentStatus === 'Entrevista agendada') currentIndex = 2;
+    if (currentStatus === 'Aprovado') currentIndex = 3;
 
-  // TIMELINE
-  const adoptionSteps = [
-    {
-      id: 1,
-      title: 'Solicitação enviada',
-      description:
-        'Sua solicitação foi enviada para a ONG.',
-      completed: true,
-      icon: 'paper-plane-outline',
-    },
+    const steps = [
+      {
+        id: 1,
+        title: 'Solicitação enviada',
+        description: 'Sua solicitação foi enviada para a ONG.',
+        icon: 'paper-plane-outline',
+      },
+      {
+        id: 2,
+        title: 'Em análise',
+        description: 'A ONG está analisando suas respostas.',
+        icon: 'time-outline',
+      },
+      {
+        id: 3,
+        title: 'Entrevista',
+        description: 'Conversa inicial com a ONG.',
+        icon: 'chatbubble-ellipses-outline',
+      },
+      {
+        id: 4,
+        title: 'Resultado final',
+        description: 'Resultado da avaliação da adoção.',
+        icon: 'heart-outline',
+      },
+    ];
 
-    {
-      id: 2,
-      title: 'Em análise',
-      description:
-        'A ONG está analisando suas respostas.',
-      completed: true,
-      icon: 'time-outline',
-    },
+    // Mapeia os passos definindo se estão completos baseados no index do status atual
+    return steps.map((step, index) => ({
+      ...step,
+      completed: index <= currentIndex,
+    }));
+  };
 
-    {
-      id: 3,
-      title: 'Entrevista',
-      description:
-        'Conversa inicial com a ONG.',
-      completed: false,
-      icon: 'chatbubble-ellipses-outline',
-    },
-
-    {
-      id: 4,
-      title: 'Resultado final',
-      description:
-        'Resultado da avaliação da adoção.',
-      completed: false,
-      icon: 'heart-outline',
-    },
-  ];
+  const dynamicAdoptionSteps = getAdoptionSteps(selectedAdoption?.status || '');
 
   // ANIMAÇÕES
-  const fadeAnim = useRef(
-    new Animated.Value(0)
-  ).current;
-
-  const slideAnim = useRef(
-    new Animated.Value(25)
-  ).current;
-
-  const buttonScale = useRef(
-    new Animated.Value(1)
-  ).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(25)).current;
+  const buttonScale = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.parallel([
@@ -128,7 +115,6 @@ export default function MyAdoptions() {
         duration: 600,
         useNativeDriver: true,
       }),
-
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 600,
@@ -143,7 +129,6 @@ export default function MyAdoptions() {
         toValue: 0.98,
         useNativeDriver: true,
       }),
-
       Animated.spring(buttonScale, {
         toValue: 1,
         friction: 4,
@@ -154,7 +139,6 @@ export default function MyAdoptions() {
 
   const handleOpenDetails = (item: any) => {
     animateCard();
-
     setSelectedAdoption(item);
 
     setTimeout(() => {
@@ -173,18 +157,11 @@ export default function MyAdoptions() {
         style={[
           styles.statusBadge,
           {
-            backgroundColor: isDark
-              ? `${color}20`
-              : bg,
+            backgroundColor: isDark ? `${color}20` : bg,
           },
         ]}
       >
-        <Ionicons
-          name={icon}
-          size={14}
-          color={color}
-        />
-
+        <Ionicons name={icon} size={14} color={color} />
         <Text
           style={[
             styles.statusText,
@@ -217,13 +194,8 @@ export default function MyAdoptions() {
           style={[
             styles.card,
             {
-              backgroundColor: isDark
-                ? '#1B1B1B'
-                : '#FFFFFF',
-
-              borderColor: isDark
-                ? '#2A2A2A'
-                : '#EFEFEF',
+              backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF',
+              borderColor: isDark ? '#2A2A2A' : '#EFEFEF',
             },
           ]}
         >
@@ -241,9 +213,7 @@ export default function MyAdoptions() {
                   style={[
                     styles.petName,
                     {
-                      color: isDark
-                        ? '#FFFFFF'
-                        : '#111',
+                      color: isDark ? '#FFFFFF' : '#111',
                     },
                   ]}
                 >
@@ -252,26 +222,18 @@ export default function MyAdoptions() {
 
                 <TouchableOpacity
                   activeOpacity={0.7}
-                  onPress={() =>
-                    handleOpenDetails(item)
-                  }
+                  onPress={() => handleOpenDetails(item)}
                   style={[
                     styles.arrowButton,
                     {
-                      backgroundColor: isDark
-                        ? '#242424'
-                        : '#F4F4F4',
+                      backgroundColor: isDark ? '#242424' : '#F4F4F4',
                     },
                   ]}
                 >
                   <Ionicons
                     name="chevron-forward"
                     size={18}
-                    color={
-                      isDark
-                        ? '#FFFFFF'
-                        : '#333'
-                    }
+                    color={isDark ? '#FFFFFF' : '#333'}
                   />
                 </TouchableOpacity>
               </View>
@@ -280,9 +242,7 @@ export default function MyAdoptions() {
                 style={[
                   styles.ongText,
                   {
-                    color: isDark
-                      ? '#D2D2D2'
-                      : '#666',
+                    color: isDark ? '#D2D2D2' : '#666',
                   },
                 ]}
               >
@@ -293,23 +253,18 @@ export default function MyAdoptions() {
                 <Ionicons
                   name="calendar-outline"
                   size={15}
-                  color={
-                    isDark ? '#BDBDBD' : '#777'
-                  }
+                  color={isDark ? '#BDBDBD' : '#777'}
                 />
 
                 <Text
                   style={[
                     styles.dateText,
                     {
-                      color: isDark
-                        ? '#BDBDBD'
-                        : '#777',
+                      color: isDark ? '#BDBDBD' : '#777',
                     },
                   ]}
                 >
-                  Solicitação enviada em{' '}
-                  {item.date}
+                  Solicitação enviada em {item.date}
                 </Text>
               </View>
             </View>
@@ -330,9 +285,7 @@ export default function MyAdoptions() {
             style={[
               styles.cardFooter,
               {
-                borderTopColor: isDark
-                  ? '#2A2A2A'
-                  : '#F1F1F1',
+                borderTopColor: isDark ? '#2A2A2A' : '#F1F1F1',
               },
             ]}
           >
@@ -340,18 +293,14 @@ export default function MyAdoptions() {
               <Ionicons
                 name="heart"
                 size={16}
-                color={
-                  isDark ? '#FF80AB' : '#FF2BAA'
-                }
+                color={isDark ? '#FF80AB' : '#FF2BAA'}
               />
 
               <Text
                 style={[
                   styles.footerText,
                   {
-                    color: isDark
-                      ? '#E4E4E4'
-                      : '#555',
+                    color: isDark ? '#E4E4E4' : '#555',
                   },
                 ]}
               >
@@ -361,17 +310,13 @@ export default function MyAdoptions() {
 
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() =>
-                handleOpenDetails(item)
-              }
+              onPress={() => handleOpenDetails(item)}
             >
               <Text
                 style={[
                   styles.detailsText,
                   {
-                    color: isDark
-                      ? '#FF80AB'
-                      : '#FF2BAA',
+                    color: isDark ? '#FF80AB' : '#FF2BAA',
                   },
                 ]}
               >
@@ -403,9 +348,7 @@ export default function MyAdoptions() {
           style={[
             styles.emptyIcon,
             {
-              backgroundColor: isDark
-                ? '#1B1B1B'
-                : '#FFFFFF',
+              backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF',
             },
           ]}
         >
@@ -427,14 +370,11 @@ export default function MyAdoptions() {
           style={[
             styles.emptySubtitle,
             {
-              color: isDark
-                ? '#CFCFCF'
-                : '#666',
+              color: isDark ? '#CFCFCF' : '#666',
             },
           ]}
         >
-          Explore pets disponíveis e encontre um novo
-          melhor amigo ❤️
+          Explore pets disponíveis e encontre um novo melhor amigo ❤️
         </Text>
 
         <TouchableOpacity
@@ -443,15 +383,11 @@ export default function MyAdoptions() {
           style={[
             styles.emptyButton,
             {
-              backgroundColor: isDark
-                ? '#FF80AB'
-                : '#FF2BAA',
+              backgroundColor: isDark ? '#FF80AB' : '#FF2BAA',
             },
           ]}
         >
-          <Text style={styles.emptyButtonText}>
-            Explorar pets
-          </Text>
+          <Text style={styles.emptyButtonText}>Explorar pets</Text>
         </TouchableOpacity>
       </Animated.View>
     );
@@ -462,9 +398,7 @@ export default function MyAdoptions() {
       style={[
         styles.container,
         {
-          backgroundColor: isDark
-            ? '#121212'
-            : '#F8F9FB',
+          backgroundColor: isDark ? '#121212' : '#F8F9FB',
         },
       ]}
     >
@@ -483,13 +417,11 @@ export default function MyAdoptions() {
         <View style={styles.header}>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.back()}
+            onPress={() => router.push('/adocaoSucesso')}
             style={[
               styles.backButton,
               {
-                backgroundColor: isDark
-                  ? '#1E1E1E'
-                  : '#FFFFFF',
+                backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
               },
             ]}
           >
@@ -505,9 +437,7 @@ export default function MyAdoptions() {
               style={[
                 styles.title,
                 {
-                  color: isDark
-                    ? '#FFFFFF'
-                    : '#111',
+                  color: isDark ? '#FFFFFF' : '#111',
                 },
               ]}
             >
@@ -518,14 +448,11 @@ export default function MyAdoptions() {
               style={[
                 styles.subtitle,
                 {
-                  color: isDark
-                    ? '#CFCFCF'
-                    : '#666',
+                  color: isDark ? '#CFCFCF' : '#666',
                 },
               ]}
             >
-              Acompanhe o andamento dos seus
-              processos
+              Acompanhe o andamento dos seus processos
             </Text>
           </View>
         </View>
@@ -545,19 +472,13 @@ export default function MyAdoptions() {
       </Animated.View>
 
       {/* MODAL DETALHES */}
-      <Modal
-        visible={showDetailsModal}
-        transparent
-        animationType="fade"
-      >
+      <Modal visible={showDetailsModal} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
             style={[
               styles.detailsModal,
               {
-                backgroundColor: isDark
-                  ? '#1B1B1B'
-                  : '#FFFFFF',
+                backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF',
               },
             ]}
           >
@@ -568,9 +489,7 @@ export default function MyAdoptions() {
                   style={[
                     styles.modalTitle,
                     {
-                      color: isDark
-                        ? '#FFFFFF'
-                        : '#111',
+                      color: isDark ? '#FFFFFF' : '#111',
                     },
                   ]}
                 >
@@ -581,9 +500,7 @@ export default function MyAdoptions() {
                   style={[
                     styles.modalSubtitle,
                     {
-                      color: isDark
-                        ? '#CFCFCF'
-                        : '#666',
+                      color: isDark ? '#CFCFCF' : '#666',
                     },
                   ]}
                 >
@@ -592,24 +509,18 @@ export default function MyAdoptions() {
               </View>
 
               <TouchableOpacity
-                onPress={() =>
-                  setShowDetailsModal(false)
-                }
+                onPress={() => setShowDetailsModal(false)}
                 style={[
                   styles.closeButton,
                   {
-                    backgroundColor: isDark
-                      ? '#2A2A2A'
-                      : '#F4F4F4',
+                    backgroundColor: isDark ? '#2A2A2A' : '#F4F4F4',
                   },
                 ]}
               >
                 <Ionicons
                   name="close"
                   size={20}
-                  color={
-                    isDark ? '#fff' : '#333'
-                  }
+                  color={isDark ? '#fff' : '#333'}
                 />
               </TouchableOpacity>
             </View>
@@ -619,9 +530,7 @@ export default function MyAdoptions() {
               style={[
                 styles.modalPetCard,
                 {
-                  backgroundColor: isDark
-                    ? '#242424'
-                    : '#F8F9FB',
+                  backgroundColor: isDark ? '#242424' : '#F8F9FB',
                 },
               ]}
             >
@@ -635,9 +544,7 @@ export default function MyAdoptions() {
                   style={[
                     styles.modalPetName,
                     {
-                      color: isDark
-                        ? '#fff'
-                        : '#111',
+                      color: isDark ? '#fff' : '#111',
                     },
                   ]}
                 >
@@ -648,9 +555,7 @@ export default function MyAdoptions() {
                   style={[
                     styles.modalPetOng,
                     {
-                      color: isDark
-                        ? '#CFCFCF'
-                        : '#666',
+                      color: isDark ? '#CFCFCF' : '#666',
                     },
                   ]}
                 >
@@ -661,94 +566,79 @@ export default function MyAdoptions() {
 
             {/* TIMELINE */}
             <View style={{ marginTop: 26 }}>
-              {adoptionSteps.map(
-                (step, index) => (
-                  <View
-                    key={step.id}
-                    style={styles.timelineItem}
-                  >
+              {dynamicAdoptionSteps.map((step, index) => (
+                <View key={step.id} style={styles.timelineItem}>
+                  <View style={styles.timelineLeft}>
                     <View
-                      style={styles.timelineLeft}
+                      style={[
+                        styles.timelineIcon,
+                        {
+                          backgroundColor: step.completed
+                            ? isDark
+                              ? '#FF80AB'
+                              : '#FF2BAA'
+                            : isDark
+                            ? '#2A2A2A'
+                            : '#ECECEC',
+                        },
+                      ]}
                     >
+                      <Ionicons
+                        name={step.icon as any}
+                        size={18}
+                        color={
+                          step.completed
+                            ? '#fff'
+                            : isDark
+                            ? '#888'
+                            : '#999'
+                        }
+                      />
+                    </View>
+
+                    {index !== dynamicAdoptionSteps.length - 1 && (
                       <View
                         style={[
-                          styles.timelineIcon,
+                          styles.timelineLine,
                           {
-                            backgroundColor:
-                              step.completed
-                                ? isDark
-                                  ? '#FF80AB'
-                                  : '#FF2BAA'
-                                : isDark
-                                ? '#2A2A2A'
-                                : '#ECECEC',
-                          },
-                        ]}
-                      >
-                        <Ionicons
-                          name={step.icon as any}
-                          size={18}
-                          color={
-                            step.completed
-                              ? '#fff'
+                            backgroundColor: step.completed
+                              ? isDark
+                                ? '#FF80AB50'
+                                : '#FF2BAA40'
                               : isDark
-                              ? '#888'
-                              : '#999'
-                          }
-                        />
-                      </View>
-
-                      {index !==
-                        adoptionSteps.length -
-                          1 && (
-                        <View
-                          style={[
-                            styles.timelineLine,
-                            {
-                              backgroundColor:
-                                step.completed
-                                  ? isDark
-                                    ? '#FF80AB50'
-                                    : '#FF2BAA40'
-                                  : isDark
-                                  ? '#2A2A2A'
-                                  : '#ECECEC',
-                            },
-                          ]}
-                        />
-                      )}
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.timelineTitle,
-                          {
-                            color: isDark
-                              ? '#FFFFFF'
-                              : '#111',
+                              ? '#2A2A2A'
+                              : '#ECECEC',
                           },
                         ]}
-                      >
-                        {step.title}
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.timelineDescription,
-                          {
-                            color: isDark
-                              ? '#CFCFCF'
-                              : '#666',
-                          },
-                        ]}
-                      >
-                        {step.description}
-                      </Text>
-                    </View>
+                      />
+                    )}
                   </View>
-                )
-              )}
+
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.timelineTitle,
+                        {
+                          color: isDark ? '#FFFFFF' : '#111',
+                        },
+                      ]}
+                    >
+                      {step.title}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.timelineDescription,
+                        {
+                          color: isDark ? '#CFCFCF' : '#666',
+                        },
+                      ]}
+                    >
+                      {step.description}
+                    </Text>
+                  </View>
+                </View>
+              ))}
             </View>
 
             {/* BOTÃO */}
@@ -758,37 +648,23 @@ export default function MyAdoptions() {
                 setShowDetailsModal(false);
 
                 router.push({
-                  pathname:
-                    '/AdoptionDetails',
+                  pathname: '/adocaoDetalhes',
                   params: {
-                    petName:
-                      selectedAdoption?.petName,
-
-                    ong:
-                      selectedAdoption?.ong,
-
-                    status:
-                      selectedAdoption?.status,
-
-                    date:
-                      selectedAdoption?.date,
+                    petName: selectedAdoption?.petName,
+                    ong: selectedAdoption?.ong,
+                    status: selectedAdoption?.status,
+                    date: selectedAdoption?.date,
                   },
                 });
               }}
               style={[
                 styles.fullDetailsButton,
                 {
-                  backgroundColor: isDark
-                    ? '#FF80AB'
-                    : '#FF2BAA',
+                  backgroundColor: isDark ? '#FF80AB' : '#FF2BAA',
                 },
               ]}
             >
-              <Text
-                style={
-                  styles.fullDetailsText
-                }
-              >
+              <Text style={styles.fullDetailsText}>
                 Abrir detalhes completos
               </Text>
             </TouchableOpacity>

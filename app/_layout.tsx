@@ -44,6 +44,7 @@ export default function RootLayout() {
           <Stack.Screen name="adocaoEtapa3" options={{ headerShown: false }} />
           <Stack.Screen name="adocaoSucesso" options={{ headerShown: false }} />
           <Stack.Screen name="acompanharAdocao" options={{ headerShown: false }} />
+          <Stack.Screen name="adocaoDetalhes" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="quests" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
