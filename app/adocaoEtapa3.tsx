@@ -13,6 +13,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
@@ -26,7 +27,6 @@ export default function AdocaoEtapa3() {
   const isDark = theme === 'dark';
 
   // DADOS MOCKADOS
-  // Preparado para futura integração com API/backend
   const pet = {
     nome: 'Luke',
     idade: '2 anos',
@@ -34,23 +34,32 @@ export default function AdocaoEtapa3() {
     foto: require('@/assets/images/cachorro01.jpg'),
   };
 
-  const etapa1 = {
+  // ESTADOS EDITÁVEIS
+  const [etapa1, setEtapa1] = useState({
     nome: 'Lucas Leonardo',
     cidade: 'Matão - SP',
     moradia: 'Casa com quintal',
     animais: 'Sim',
     criancas: 'Não',
-  };
+  });
 
-  const etapa2 = {
+  const [etapa2, setEtapa2] = useState({
     motivacao: 'Dar um lar ❤️',
     experiencia: 'Já teve pets',
     rotina: 'Fica poucas horas sozinho',
     financeiro: 'Sim',
-  };
+  });
+
+  // MODAIS DE EDIÇÃO
+  const [showEditDadosModal, setShowEditDadosModal] =
+    useState(false);
+
+  const [showEditPerfilModal, setShowEditPerfilModal] =
+    useState(false);
 
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
+
   const [showSuccessModal, setShowSuccessModal] =
     useState(false);
 
@@ -120,7 +129,6 @@ export default function AdocaoEtapa3() {
       ]).start();
 
       setTimeout(() => {
-        // FUTURA TELA DE SUCESSO
         router.push('/adocaoSucesso');
       }, 2400);
     }, 2500);
@@ -177,7 +185,9 @@ export default function AdocaoEtapa3() {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={
+          Platform.OS === 'ios' ? 'padding' : undefined
+        }
       >
         <Animated.View
           style={{
@@ -296,8 +306,8 @@ export default function AdocaoEtapa3() {
                 },
               ]}
             >
-              Você está prestes a enviar sua solicitação de
-              adoção ❤️
+              Você está prestes a enviar sua solicitação
+              de adoção ❤️
             </Text>
           </View>
 
@@ -406,6 +416,9 @@ export default function AdocaoEtapa3() {
 
                 <TouchableOpacity
                   activeOpacity={0.8}
+                  onPress={() =>
+                    setShowEditDadosModal(true)
+                  }
                   style={[
                     styles.editButton,
                     {
@@ -497,6 +510,9 @@ export default function AdocaoEtapa3() {
 
                 <TouchableOpacity
                   activeOpacity={0.8}
+                  onPress={() =>
+                    setShowEditPerfilModal(true)
+                  }
                   style={[
                     styles.editButton,
                     {
@@ -690,6 +706,399 @@ export default function AdocaoEtapa3() {
               </TouchableOpacity>
             </Animated.View>
           </View>
+
+          {/* MODAL EDITAR DADOS */}
+          <Modal
+            visible={showEditDadosModal}
+            transparent
+            animationType="fade"
+          >
+            <View style={styles.modalOverlay}>
+              <View
+                style={[
+                  styles.editModalCard,
+                  {
+                    backgroundColor: isDark
+                      ? '#1B1B1B'
+                      : '#FFFFFF',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modalEditTitle,
+                    {
+                      color: isDark
+                        ? '#FFFFFF'
+                        : '#222',
+                    },
+                  ]}
+                >
+                  Editar dados 👤
+                </Text>
+
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                >
+                  <TextInput
+                    placeholder="Nome"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa1.nome}
+                    onChangeText={(text) =>
+                      setEtapa1({
+                        ...etapa1,
+                        nome: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Cidade"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa1.cidade}
+                    onChangeText={(text) =>
+                      setEtapa1({
+                        ...etapa1,
+                        cidade: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Moradia"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa1.moradia}
+                    onChangeText={(text) =>
+                      setEtapa1({
+                        ...etapa1,
+                        moradia: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Outros animais"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa1.animais}
+                    onChangeText={(text) =>
+                      setEtapa1({
+                        ...etapa1,
+                        animais: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Possui crianças"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa1.criancas}
+                    onChangeText={(text) =>
+                      setEtapa1({
+                        ...etapa1,
+                        criancas: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+                </ScrollView>
+
+                <View style={styles.modalButtonsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalSecondaryButton,
+                      {
+                        backgroundColor: isDark
+                          ? '#2A2A2A'
+                          : '#ECECEC',
+                      },
+                    ]}
+                    onPress={() =>
+                      setShowEditDadosModal(false)
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.modalSecondaryText,
+                        {
+                          color: isDark
+                            ? '#fff'
+                            : '#333',
+                        },
+                      ]}
+                    >
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.modalPrimaryButton,
+                      {
+                        backgroundColor: isDark
+                          ? '#FF80AB'
+                          : '#FF2BAA',
+                      },
+                    ]}
+                    onPress={() =>
+                      setShowEditDadosModal(false)
+                    }
+                  >
+                    <Text style={styles.modalPrimaryText}>
+                      Salvar
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          {/* MODAL EDITAR PERFIL */}
+          <Modal
+            visible={showEditPerfilModal}
+            transparent
+            animationType="fade"
+          >
+            <View style={styles.modalOverlay}>
+              <View
+                style={[
+                  styles.editModalCard,
+                  {
+                    backgroundColor: isDark
+                      ? '#1B1B1B'
+                      : '#FFFFFF',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.modalEditTitle,
+                    {
+                      color: isDark
+                        ? '#FFFFFF'
+                        : '#222',
+                    },
+                  ]}
+                >
+                  Editar respostas ❤️
+                </Text>
+
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                >
+                  <TextInput
+                    placeholder="Motivação"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa2.motivacao}
+                    onChangeText={(text) =>
+                      setEtapa2({
+                        ...etapa2,
+                        motivacao: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Experiência"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa2.experiencia}
+                    onChangeText={(text) =>
+                      setEtapa2({
+                        ...etapa2,
+                        experiencia: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Rotina"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa2.rotina}
+                    onChangeText={(text) =>
+                      setEtapa2({
+                        ...etapa2,
+                        rotina: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+
+                  <TextInput
+                    placeholder="Responsabilidade financeira"
+                    placeholderTextColor={
+                      isDark ? '#999' : '#999'
+                    }
+                    value={etapa2.financeiro}
+                    onChangeText={(text) =>
+                      setEtapa2({
+                        ...etapa2,
+                        financeiro: text,
+                      })
+                    }
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: isDark
+                          ? '#242424'
+                          : '#F4F4F4',
+                        color: isDark
+                          ? '#fff'
+                          : '#222',
+                      },
+                    ]}
+                  />
+                </ScrollView>
+
+                <View style={styles.modalButtonsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.modalSecondaryButton,
+                      {
+                        backgroundColor: isDark
+                          ? '#2A2A2A'
+                          : '#ECECEC',
+                      },
+                    ]}
+                    onPress={() =>
+                      setShowEditPerfilModal(false)
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.modalSecondaryText,
+                        {
+                          color: isDark
+                            ? '#fff'
+                            : '#333',
+                        },
+                      ]}
+                    >
+                      Cancelar
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.modalPrimaryButton,
+                      {
+                        backgroundColor: isDark
+                          ? '#FF80AB'
+                          : '#FF2BAA',
+                      },
+                    ]}
+                    onPress={() =>
+                      setShowEditPerfilModal(false)
+                    }
+                  >
+                    <Text style={styles.modalPrimaryText}>
+                      Salvar
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
 
           {/* MODAL SUCESSO */}
           <Modal transparent visible={showSuccessModal}>
@@ -1050,5 +1459,57 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 25,
+  },
+
+  editModalCard: {
+    width: '100%',
+    borderRadius: 28,
+    padding: 22,
+    maxHeight: '85%',
+  },
+
+  modalEditTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+
+  input: {
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    fontSize: 15,
+    marginBottom: 14,
+  },
+
+  modalButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 10,
+  },
+
+  modalSecondaryButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 18,
+    alignItems: 'center',
+  },
+
+  modalPrimaryButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 18,
+    alignItems: 'center',
+  },
+
+  modalSecondaryText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  modalPrimaryText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });
