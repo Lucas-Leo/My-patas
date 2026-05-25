@@ -1,12 +1,12 @@
 import {
-Alert,
 Image,
 ScrollView,
 StyleSheet,
 Text,
 TextInput,
 TouchableOpacity,
-View
+View,
+Modal
 } from "react-native";
 
 import { Link, router } from "expo-router";
@@ -26,9 +26,30 @@ const [password2,setPassword2] = useState("");
 const [showPassword,setShowPassword] = useState(false);
 const [showConfirmPassword,setShowConfirmPassword] = useState(false);
 const [celular,setCelular] = useState("");
-const isFormComplete = !!(nome && nomeresponsavel && login && cnpj && celular && password && password2);
 
 const [usuarioComumCriado,setUsuarioComumCriado] = useState(false);
+
+const [modalVisible,setModalVisible] = useState(false);
+const [modalTitle,setModalTitle] = useState("");
+const [modalMessage,setModalMessage] = useState("");
+const [showRedirectButton,setShowRedirectButton] = useState(false);
+
+const isFormComplete = !!(
+nome &&
+nomeresponsavel &&
+login &&
+cnpj &&
+celular &&
+password &&
+password2
+);
+
+function abrirModal(title,message,redirect = false){
+setModalTitle(title);
+setModalMessage(message);
+setShowRedirectButton(redirect);
+setModalVisible(true);
+}
 
 function mascaraCNPJ(value){
 value = value.replace(/\D/g,"")
@@ -76,53 +97,67 @@ if(!password) camposFaltando.push("Senha")
 if(!password2) camposFaltando.push("Confirmação de senha")
 
 if(camposFaltando.length > 0){
-Alert.alert(
-"Erro",
-"Preencha os campos obrigatórios:\n\n" +
-camposFaltando.map(campo => `${campo}: Campo obrigatório`).join("\n")
+
+abrirModal(
+"Campos obrigatórios",
+"Preencha todos os campos para continuar."
 )
+
 return
 }
 
 if(!validarEmail(login)){
-Alert.alert("Erro","E-mail inválido.")
+
+abrirModal(
+"Erro",
+"E-mail inválido."
+)
+
 return
 }
 
 if(!validarCNPJ(cnpj)){
-Alert.alert("Erro","CNPJ inválido.")
+
+abrirModal(
+"Erro",
+"CNPJ inválido."
+)
+
 return
 }
 
 if(!validarTelefone(celular)){
-Alert.alert("Erro","Telefone inválido.")
+
+abrirModal(
+"Erro",
+"Telefone inválido."
+)
+
 return
 }
 
 if(password !== password2){
-Alert.alert("Erro","As senhas não coincidem.")
+
+abrirModal(
+"Erro",
+"As senhas não coincidem."
+)
+
 return
 }
 
 if(!usuarioComumCriado){
-Alert.alert(
-"Aviso",
-"Para criar uma conta de ONG, é necessário ter uma conta de usuário comum.",
-[
-{
-text: "Cancelar",
-style: "cancel"
-},
-{
-text: "Criar conta de usuário",
-onPress: () => router.push("/register")
-}
-]
+
+abrirModal(
+"Conta necessária",
+"Para criar uma conta de ONG, primeiro é necessário criar uma conta de usuário comum.",
+true
 )
+
 return
 }
 
-Alert.alert(
+abrirModal(
 "Sucesso",
 "Conta de ONG criada com sucesso!"
 )
@@ -132,7 +167,11 @@ console.log("Cadastro ONG realizado com sucesso")
 }catch(error){
 
 console.log("Erro no processo:",error)
-Alert.alert("Erro","Ocorreu um problema durante o processo.")
+
+abrirModal(
+"Erro",
+"Ocorreu um problema durante o processo."
+)
 
 }
 
@@ -145,6 +184,7 @@ return(
 showsVerticalScrollIndicator={false}
 contentContainerStyle={styles.scrollContent}
 >
+
 <View style={styles.header}>
 <Image source={logoApp} style={styles.logo}/>
 <Text style={styles.inputText}>Criar Conta</Text>
@@ -229,16 +269,16 @@ name={showPassword ? "eye" : "eye-off"}
 size={24}
 color="#0E457D"
 />
-
 </TouchableOpacity>
 
 </View>
-
 </View>
 
 <View style={styles.containerInput}>
 {password2 ? <Text style={styles.fieldLabel}>Confirme sua senha</Text> : null}
+
 <View style={styles.containerSenha}>
+
 <TextInput
 style={styles.inputPassword}
 placeholder="Confirme sua senha"
@@ -247,6 +287,7 @@ value={password2}
 secureTextEntry={!showConfirmPassword}
 maxLength={8}
 />
+
 <TouchableOpacity
 onPress={()=>setShowConfirmPassword(!showConfirmPassword)}
 style={styles.iconPassword}
@@ -257,13 +298,16 @@ size={24}
 color="#0E457D"
 />
 </TouchableOpacity>
+
 </View>
 </View>
 
 <TouchableOpacity
 style={[
 styles.button,
-{ backgroundColor: isFormComplete ? "#FF42B3" : "#0E457D" }
+{
+backgroundColor: isFormComplete ? "#FF42B3" : "#0E457D"
+}
 ]}
 onPress={()=>onClickRegistrarONG()}
 >
@@ -291,6 +335,66 @@ Fazer Login.
 </View>
 
 </ScrollView>
+
+<Modal
+visible={modalVisible}
+transparent
+animationType="fade"
+>
+
+<View style={styles.modalOverlay}>
+
+<View style={styles.modalContainer}>
+
+<TouchableOpacity
+style={styles.closeButton}
+onPress={()=>{
+setModalVisible(false);
+}}
+>
+<Ionicons
+name="close"
+size={28}
+color="#0E457D"
+/>
+</TouchableOpacity>
+
+<Text style={styles.modalTitle}>
+{modalTitle}
+</Text>
+
+<Text style={styles.modalMessage}>
+{modalMessage}
+</Text>
+
+<View style={styles.modalButtons}>
+
+{showRedirectButton && (
+
+<TouchableOpacity
+style={[styles.modalButton,{backgroundColor:"#FF42B3"}]}
+onPress={()=>{
+setModalVisible(false);
+router.push("/register");
+}}
+>
+
+<Text style={styles.modalButtonText}>
+Criar conta comum
+</Text>
+
+</TouchableOpacity>
+
+)}
+
+</View>
+
+</View>
+
+</View>
+
+</Modal>
+
 </View>
 )
 }
@@ -304,6 +408,7 @@ backgroundColor:"#ffffff",
 paddingLeft:20,
 paddingRight:20
 },
+
 scrollContent:{
 paddingBottom:20
 },
@@ -362,6 +467,7 @@ borderRadius:30,
 fontSize:16,
 padding:20
 },
+
 fieldLabel:{
 fontSize:13,
 fontWeight:"600",
@@ -377,7 +483,6 @@ fontWeight:"bold"
 
 button:{
 marginTop:45,
-backgroundColor:"#0E457D",
 width:"100%",
 height:50,
 borderRadius:10,
@@ -401,6 +506,7 @@ borderRadius:30,
 paddingLeft:20,
 paddingRight:20
 },
+
 inputPassword:{
 flex:1,
 fontSize:16
@@ -410,6 +516,67 @@ iconPassword:{
 alignItems:"center",
 justifyContent:"center",
 paddingHorizontal:5
+},
+
+modalOverlay:{
+flex:1,
+backgroundColor:"rgba(0,0,0,0.5)",
+justifyContent:"center",
+alignItems:"center",
+padding:20
+},
+
+modalContainer:{
+width:"100%",
+backgroundColor:"#fff",
+borderRadius:25,
+padding:25,
+alignItems:"center",
+position:"relative"
+},
+
+closeButton:{
+position:"absolute",
+top:15,
+right:15,
+zIndex:10
+},
+
+modalTitle:{
+fontSize:22,
+fontWeight:"bold",
+color:"#0E457D",
+marginBottom:15,
+textAlign:"center",
+marginTop:10
+},
+
+modalMessage:{
+fontSize:16,
+color:"#444",
+textAlign:"center",
+lineHeight:24
+},
+
+modalButtons:{
+width:"100%",
+marginTop:25,
+gap:10
+},
+
+modalButton:{
+width:"100%",
+height:50,
+backgroundColor:"#0E457D",
+borderRadius:12,
+alignItems:"center",
+justifyContent:"center"
+},
+
+modalButtonText:{
+color:"#fff",
+fontSize:16,
+fontWeight:"bold"
 }
 
 });

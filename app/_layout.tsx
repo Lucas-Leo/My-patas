@@ -35,6 +35,7 @@ export default function RootLayout() {
           <Stack.Screen name="registerONG" options={{ headerShown: false }} />
           <Stack.Screen name="novasenha" options={{ headerShown: false }} />
           <Stack.Screen name="perfil" options={{ headerShown: false }} />
+          <Stack.Screen name="perfilONG" options={{ headerShown: false }} />
           <Stack.Screen name="editaruserComum" options={{ headerShown: false }} />
           <Stack.Screen name="home" options={{ headerShown: false }} />
           <Stack.Screen name="ongs" options={{ headerShown: false }} />
