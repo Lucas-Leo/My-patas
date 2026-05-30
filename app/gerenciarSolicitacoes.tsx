@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -15,22 +15,23 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
+import { ComponentProps } from 'react';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function DetalhesSolicitacaoONG() {
   const router = useRouter();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  // Cores institucionais mapeadas do modelo padrão
   const primaryColor = isDark ? '#FF80AB' : '#FF2BAA';
-  const shadowColor = isDark ? '#000000' : '#000000';
+  const shadowColor = '#000000';
 
-  // MOCK DA SOLICITAÇÃO (ESTADO INICIAL)
   const [solicitacao, setSolicitacao] = useState({
     pet: {
       nome: 'Thor',
       emoji: '🐶',
-      imagem: require('@/assets/images/cachorro02.jpg'), // Baseado no mock existente
+      imagem: require('@/assets/images/cachorro02.jpg'),
     },
     adotante: {
       nome: 'Lucas Silva',
@@ -39,7 +40,7 @@ export default function DetalhesSolicitacaoONG() {
       estado: 'SP',
       telefone: '5516999999999',
       email: 'lucas.silva@email.com',
-      foto: require('@/assets/images/cachorro01.jpg'), // Placeholder do adotante usando assets
+      foto: require('@/assets/images/cachorro01.jpg'),
     },
     resumo: {
       dataSolicitacao: '28 Maio 2026',
@@ -59,15 +60,13 @@ export default function DetalhesSolicitacaoONG() {
       disponibilidade: 75,
       perfilFamiliar: 85,
     },
-    status: 'Em análise', // Status atual dinâmico
+    status: 'Em análise',
   });
 
-  // ESTADOS LOCAIS DA INTERFACE
   const [observacao, setObservacao] = useState('Família aparenta ser altamente compatível com o perfil ativo do pet.');
   const [modalStatusVisivel, setModalStatusVisivel] = useState(false);
 
-  // CONFIGURAÇÃO DOS STATUS E CORES DA JORNADA
-  const statusConfig: { [key: string]: { label: string; color: string; bg: string; icon: string } } = {
+  const statusConfig: { [key: string]: { label: string; color: string; bg: string; icon: IconName } } = {
     'Em análise': { label: 'Solicitação em análise', color: '#F7B500', bg: '#FFF6D8', icon: 'time-outline' },
     'Entrevista': { label: 'Entrevista agendada', color: '#8B5CF6', bg: '#EFE7FF', icon: 'calendar-outline' },
     'Visita': { label: 'Visita agendada', color: '#3B82F6', bg: '#EFF6FF', icon: 'home-outline' },
@@ -76,8 +75,7 @@ export default function DetalhesSolicitacaoONG() {
     'Reprovado': { label: 'Reprovado', color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
   };
 
-  // LISTA ESTÁTICA DE TODAS AS ETAPAS DA TIMELINE
-  const todasEtapas = [
+  const todasEtapas: { key: string; label: string; icon: IconName }[] = [
     { key: 'Solicitação enviada', label: 'Solicitação enviada', icon: 'paper-plane-outline' },
     { key: 'Em análise', label: 'Em análise', icon: 'time-outline' },
     { key: 'Entrevista', label: 'Entrevista', icon: 'chatbubble-ellipses-outline' },
@@ -86,13 +84,10 @@ export default function DetalhesSolicitacaoONG() {
     { key: 'Entregue', label: 'Entrega do pet', icon: 'happy-outline' },
   ];
 
-  // RETORNA AS ETAPAS MAPEADAS COM STATUS DE "COMPLETADO" DINAMICAMENTE
   const obterPassosTimeline = () => {
     const statusAtual = solicitacao.status;
-    
-    // Se estiver reprovado, a timeline trava visualmente na análise
     let indiceAtual = todasEtapas.findIndex(e => e.key === statusAtual);
-    if (statusAtual === 'Reprovado') indiceAtual = 1; 
+    if (statusAtual === 'Reprovado') indiceAtual = 1;
 
     return todasEtapas.map((etapa, index) => ({
       ...etapa,
@@ -101,12 +96,10 @@ export default function DetalhesSolicitacaoONG() {
     }));
   };
 
-  // ENVIAR NOTIFICAÇÃO (MOCK BACKEND)
   const simularEnvioNotificacao = (novoStatus: string) => {
-    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. Mensagem: Olá ${solicitacao.adotante.nome}, o status da sua solicitação para o pet ${solicitacao.pet.nome} foi atualizado para: ${novoStatus}.`);
+    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. Status: ${novoStatus}.`);
   };
 
-  // MUDANÇA DE STATUS DA SOLICITAÇÃO
   const atualizarStatusGeral = (novoStatus: string) => {
     setSolicitacao(prev => ({ ...prev, status: novoStatus }));
     setModalStatusVisivel(false);
@@ -114,7 +107,6 @@ export default function DetalhesSolicitacaoONG() {
     Alert.alert('Status Atualizado', `O processo agora está na etapa: ${novoStatus}. O adotante foi notificado.`);
   };
 
-  // LINKING PARA WHATSAPP NATIVO
   const abrirWhatsAppAdotante = () => {
     const mensagem = `Olá ${solicitacao.adotante.nome}, aqui é da ONG do app Patas Conscientes. Estamos analisando sua solicitação de adoção para o ${solicitacao.pet.nome}!`;
     const url = `whatsapp://send?phone=${solicitacao.adotante.telefone}&text=${encodeURIComponent(mensagem)}`;
@@ -130,12 +122,10 @@ export default function DetalhesSolicitacaoONG() {
       .catch(() => Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.'));
   };
 
-  // COMPONENTE DE BARRA DE PROGRESSO EMOCIONAL (RENDER FIXO)
   const renderBarraProgresso = (porcentagem: number) => {
     const totalBlocos = 10;
     const blocosAtivos = Math.round((porcentagem / 100) * totalBlocos);
-    const preenchimentoTexto = '█'.repeat(blocosAtivos) + '░'.repeat(totalBlocos - blocosAtivos);
-    return `${preenchimentoTexto} ${porcentagem}%`;
+    return '█'.repeat(blocosAtivos) + '░'.repeat(totalBlocos - blocosAtivos) + ` ${porcentagem}%`;
   };
 
   return (
@@ -159,9 +149,7 @@ export default function DetalhesSolicitacaoONG() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
-        {/* ====================================================
-            HEADER DA TELA
-            ==================================================== */}
+        {/* HEADER DA TELA */}
         <View style={[styles.profileHeaderCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <Image source={solicitacao.pet.imagem} style={styles.petAvatar} resizeMode="cover" />
           <View style={styles.petHeaderDetails}>
@@ -170,7 +158,7 @@ export default function DetalhesSolicitacaoONG() {
             </Text>
             
             <View style={[styles.statusBadge, { backgroundColor: isDark ? `${statusConfig[solicitacao.status].color}20` : statusConfig[solicitacao.status].bg }]}>
-              <Ionicons name={statusConfig[solicitacao.status].icon as any} size={14} color={statusConfig[solicitacao.status].color} />
+              <Ionicons name={statusConfig[solicitacao.status].icon} size={14} color={statusConfig[solicitacao.status].color} />
               <Text style={[styles.statusText, { color: statusConfig[solicitacao.status].color }]}>
                 {statusConfig[solicitacao.status].label}
               </Text>
@@ -182,9 +170,7 @@ export default function DetalhesSolicitacaoONG() {
           </View>
         </View>
 
-        {/* ====================================================
-            CARD RESUMO DA SOLICITAÇÃO
-            ==================================================== */}
+        {/* CARD RESUMO DA SOLICITAÇÃO */}
         <View style={[styles.card, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="document-text-outline" size={20} color={primaryColor} />
@@ -208,7 +194,7 @@ export default function DetalhesSolicitacaoONG() {
               <Text style={styles.infoLabel}>Experiência Prévia</Text>
               <Text style={[styles.infoValue, { color: isDark ? '#FFFFFF' : '#333333' }]}>{solicitacao.resumo.experienciaAnimais}</Text>
             </View>
-            <View style={[styles.quickInfoBox, { backgroundColor: isDark ? '#242424' : '#F8F9FB', flex: 1, width: '100%' }]}>
+            <View style={[styles.quickInfoBox, { backgroundColor: isDark ? '#242424' : '#F8F9FB', width: '100%' }]}>
               <Text style={styles.infoLabel}>Localização</Text>
               <Text style={[styles.infoValue, { color: isDark ? '#FFFFFF' : '#333333' }]}>
                 {solicitacao.adotante.cidade} - {solicitacao.adotante.estado}
@@ -217,9 +203,7 @@ export default function DetalhesSolicitacaoONG() {
           </View>
         </View>
 
-        {/* ====================================================
-            CARD PERFIL DO ADOTANTE
-            ==================================================== */}
+        {/* CARD PERFIL DO ADOTANTE */}
         <View style={[styles.card, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="person-outline" size={20} color={primaryColor} />
@@ -247,9 +231,7 @@ export default function DetalhesSolicitacaoONG() {
           </TouchableOpacity>
         </View>
 
-        {/* ====================================================
-            CARD QUESTIONÁRIO DE ADOÇÃO
-            ==================================================== */}
+        {/* CARD QUESTIONÁRIO DE ADOÇÃO */}
         <View style={[styles.card, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="help-circle-outline" size={20} color={primaryColor} />
@@ -266,15 +248,13 @@ export default function DetalhesSolicitacaoONG() {
           <TouchableOpacity 
             style={[styles.secondaryButton, { borderColor: primaryColor }]} 
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Questionário Completo', 'Redirecionando para o formulário integral consolidado do adotante.')}
+            onPress={() => Alert.alert('Questionário Completo', 'Redirecionando para o formulário integral.')}
           >
             <Text style={[styles.secondaryButtonText, { color: primaryColor }]}>Ver questionário completo</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ====================================================
-            CARD PERFIL EMOCIONAL
-            ==================================================== */}
+        {/* CARD PERFIL EMOCIONAL */}
         <View style={[styles.card, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="analytics-outline" size={20} color={primaryColor} />
@@ -282,45 +262,35 @@ export default function DetalhesSolicitacaoONG() {
           </View>
 
           <View style={styles.metricContainer}>
-            <View style={styles.metricLabelRow}>
-              <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Responsabilidade</Text>
-            </View>
+            <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Responsabilidade</Text>
             <Text style={[styles.progressBarText, { color: primaryColor }]}>
               {renderBarraProgresso(solicitacao.perfilEmocional.responsabilidade)}
             </Text>
           </View>
 
           <View style={styles.metricContainer}>
-            <View style={styles.metricLabelRow}>
-              <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Comprometimento</Text>
-            </View>
+            <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Comprometimento</Text>
             <Text style={[styles.progressBarText, { color: primaryColor }]}>
               {renderBarraProgresso(solicitacao.perfilEmocional.comprometimento)}
             </Text>
           </View>
 
           <View style={styles.metricContainer}>
-            <View style={styles.metricLabelRow}>
-              <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Disponibilidade de Tempo</Text>
-            </View>
+            <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Disponibilidade de Tempo</Text>
             <Text style={[styles.progressBarText, { color: primaryColor }]}>
               {renderBarraProgresso(solicitacao.perfilEmocional.disponibilidade)}
             </Text>
           </View>
 
           <View style={styles.metricContainer}>
-            <View style={styles.metricLabelRow}>
-              <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Adequação do Perfil Familiar</Text>
-            </View>
+            <Text style={[styles.metricLabel, { color: isDark ? '#E4E4E4' : '#333333' }]}>Adequação do Perfil Familiar</Text>
             <Text style={[styles.progressBarText, { color: primaryColor }]}>
               {renderBarraProgresso(solicitacao.perfilEmocional.perfilFamiliar)}
             </Text>
           </View>
         </View>
 
-        {/* ====================================================
-            TIMELINE DO PROCESSO
-            ==================================================== */}
+        {/* TIMELINE DO PROCESSO */}
         <View style={[styles.card, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="git-commit-outline" size={20} color={primaryColor} />
@@ -340,7 +310,7 @@ export default function DetalhesSolicitacaoONG() {
                     }
                   ]}>
                     <Ionicons 
-                      name={passo.completo ? 'checkmark' : (passo.icon as any)} 
+                      name={passo.completo ? 'checkmark' : passo.icon} 
                       size={14} 
                       color={passo.completo || passo.ativo ? '#FFFFFF' : '#888888'} 
                     />
@@ -368,9 +338,7 @@ export default function DetalhesSolicitacaoONG() {
           </View>
         </View>
 
-        {/* ====================================================
-            CARD OBSERVAÇÕES DA ONG
-            ==================================================== */}
+        {/* CARD OBSERVAÇÕES DA ONG */}
         <View style={[styles.card, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <View style={styles.cardHeaderRow}>
             <Ionicons name="create-outline" size={20} color={primaryColor} />
@@ -387,23 +355,21 @@ export default function DetalhesSolicitacaoONG() {
             numberOfLines={4}
             value={observacao}
             onChangeText={setObservacao}
-            placeholder="Digite anotações internas sobre a entrevista ou perfil..."
+            placeholder="Digite anotações internas..."
             placeholderTextColor="#888888"
           />
 
           <TouchableOpacity 
             style={[styles.saveButton, { backgroundColor: isDark ? '#333333' : '#F1F5F9' }]}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Sucesso', 'Observações internas salvas na ficha da solicitação.')}
+            onPress={() => Alert.alert('Sucesso', 'Observações internas salvas.')}
           >
             <Ionicons name="save-outline" size={16} color={isDark ? '#FFFFFF' : '#333333'} />
             <Text style={[styles.saveButtonText, { color: isDark ? '#FFFFFF' : '#333333' }]}>Salvar observação</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ====================================================
-            AÇÕES DE GERENCIAMENTO DA ONG
-            ==================================================== */}
+        {/* AÇÕES DE GERENCIAMENTO DA ONG */}
         <View style={styles.actionsContainer}>
           <Text style={[styles.sectionTitleLabel, { color: isDark ? '#BDBDBD' : '#666666' }]}>Ações de Gestão do Processo</Text>
           
@@ -418,7 +384,7 @@ export default function DetalhesSolicitacaoONG() {
 
             <TouchableOpacity 
               style={[styles.actionGridButton, { backgroundColor: '#3B82F6' }]}
-              onPress={() => Alert.alert('Informações', 'Solicitação de documentos adicionais enviada ao adotante.')}
+              onPress={() => Alert.alert('Informações', 'Documentos solicitados.')}
             >
               <Ionicons name="information-circle" size={18} color="#FFFFFF" />
               <Text style={styles.actionGridButtonText}>Pedir Info Extra</Text>
@@ -439,7 +405,7 @@ export default function DetalhesSolicitacaoONG() {
               style={[styles.decisionButton, { backgroundColor: '#22C55E' }]}
               activeOpacity={0.9}
               onPress={() => {
-                Alert.alert('Confirmar Aprovação', 'Deseja aprovar definitivamente esta solicitação de adoção?', [
+                Alert.alert('Confirmar Aprovação', 'Deseja aprovar definitivamente esta solicitação?', [
                   { text: 'Cancelar', style: 'cancel' },
                   { text: 'Sim, Aprovar', onPress: () => atualizarStatusGeral('Aprovado') }
                 ]);
@@ -453,7 +419,7 @@ export default function DetalhesSolicitacaoONG() {
               style={[styles.decisionButton, { backgroundColor: '#EF4444' }]}
               activeOpacity={0.9}
               onPress={() => {
-                Alert.alert('Confirmar Reprovação', 'Tem certeza que deseja reprovar esta solicitação? Esta ação notificará o usuário.', [
+                Alert.alert('Confirmar Reprovação', 'Tem certeza que deseja reprovar esta solicitação?', [
                   { text: 'Cancelar', style: 'cancel' },
                   { text: 'Sim, Reprovar', onPress: () => atualizarStatusGeral('Reprovado') }
                 ]);
@@ -467,13 +433,10 @@ export default function DetalhesSolicitacaoONG() {
 
       </ScrollView>
 
-      {/* ====================================================
-          MODAL ATUALIZAR STATUS
-          ==================================================== */}
+      {/* MODAL ATUALIZAR STATUS */}
       <Modal visible={modalStatusVisivel} transparent animationType="fade" onRequestClose={() => setModalStatusVisivel(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
-            
             <View style={styles.modalHeader}>
               <View>
                 <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Alterar Status</Text>
@@ -499,7 +462,7 @@ export default function DetalhesSolicitacaoONG() {
                   onPress={() => atualizarStatusGeral(key)}
                 >
                   <View style={[styles.modalOptionIconWrapper, { backgroundColor: `${statusConfig[key].color}20` }]}>
-                    <Ionicons name={statusConfig[key].icon as any} size={18} color={statusConfig[key].color} />
+                    <Ionicons name={statusConfig[key].icon} size={18} color={statusConfig[key].color} />
                   </View>
                   <Text style={[styles.modalOptionLabel, { color: isDark ? '#FFFFFF' : '#333333', fontWeight: solicitacao.status === key ? '700' : '500' }]}>
                     {statusConfig[key].label}
@@ -510,7 +473,6 @@ export default function DetalhesSolicitacaoONG() {
                 </TouchableOpacity>
               ))}
             </View>
-
           </View>
         </View>
       </Modal>
@@ -705,10 +667,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     gap: 6,
   },
-  metricLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
   metricLabel: {
     fontSize: 13,
     fontWeight: '600',
@@ -867,7 +825,7 @@ const styles = StyleSheet.create({
   closeModalButton: {
     width: 36,
     height: 36,
-    borderRadius: 12,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -877,8 +835,8 @@ const styles = StyleSheet.create({
   modalOptionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 20,
     gap: 14,
   },
   modalOptionIconWrapper: {
@@ -889,6 +847,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalOptionLabel: {
-    fontSize: 14,
+    fontSize: 15,
   },
 });
