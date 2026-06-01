@@ -12,10 +12,12 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Modal,
 } from 'react-native';
-import { AntDesign } from '@expo/vector-icons';
+import { AntDesign, MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
+import { useRouter } from 'expo-router';
 import api from '../src/service/api';
 import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
 
@@ -27,6 +29,7 @@ function petImageSource(pet?: PetApp | null) {
 }
 
 export default function SwipeScreen() {
+  const router = useRouter();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
@@ -34,12 +37,18 @@ export default function SwipeScreen() {
   const [selectedPet, setSelectedPet] = useState<PetApp | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingLike, setSavingLike] = useState(false);
+  
+  // Estado para controlar a exibição do Modal de Passos para Adoção
+  const [stepsModalVisible, setStepsModalVisible] = useState(false);
 
   const position = useRef(new Animated.ValueXY()).current;
   const likeAnim = useRef(new Animated.Value(0)).current;
 
   const sheetY = useRef(new Animated.Value(height)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
+
+  const stepsFadeAnim = useRef(new Animated.Value(0)).current;
+  const stepsSlideAnim = useRef(new Animated.Value(40)).current;
 
   const currentPet = pets[0];
 
@@ -183,6 +192,48 @@ export default function SwipeScreen() {
     ]).start(() => setSelectedPet(null));
   };
 
+  // Funções para abrir/fechar o Modal explicativo de Adoção
+  const openStepsModal = () => {
+    setStepsModalVisible(true);
+    Animated.parallel([
+      Animated.timing(stepsFadeAnim, {
+        toValue: 1,
+        duration: 280,
+        useNativeDriver: true,
+      }),
+      Animated.timing(stepsSlideAnim, {
+        toValue: 0,
+        duration: 280,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
+  const closeStepsModal = () => {
+    Animated.parallel([
+      Animated.timing(stepsFadeAnim, {
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.timing(stepsSlideAnim, {
+        toValue: 40,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setStepsModalVisible(false);
+    });
+  };
+
+  const handleContinueAdoption = () => {
+    closeStepsModal();
+    closeSheet();
+    setTimeout(() => {
+      router.push('/adocao');
+    }, 250);
+  };
+
   const sheetPan = PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 5,
     onPanResponderMove: (_, g) => {
@@ -191,7 +242,7 @@ export default function SwipeScreen() {
       }
     },
     onPanResponderRelease: (_, g) => {
-      if (g.dy > 120) {
+      if (g.dy > 150) {
         closeSheet();
       } else {
         Animated.spring(sheetY, {
@@ -296,6 +347,7 @@ export default function SwipeScreen() {
         )}
       </View>
 
+      {/* DETALHES DO PET (TELA CHEIA) */}
       {selectedPet && (
         <>
           <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
@@ -306,41 +358,181 @@ export default function SwipeScreen() {
             style={[
               styles.bottomSheet,
               {
+                backgroundColor: isDark ? '#1E1E1E' : '#fff',
                 transform: [{ translateY: sheetY }],
               },
             ]}
             {...sheetPan.panHandlers}
           >
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Image source={petImageSource(selectedPet)} style={styles.sheetImage} />
-
-              <View style={styles.sheetContent}>
-                <Text style={styles.sheetTitle}>{selectedPet.name}</Text>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>ONG</Text>
-                  <Text>{selectedPet.ong}</Text>
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Sobre</Text>
-                  <Text>{selectedPet.description}</Text>
-                </View>
-
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>Detalhes</Text>
-                  <Text>{selectedPet.idade} - {selectedPet.porte}</Text>
-                  <Text>{selectedPet.vacinado ? 'Vacinado' : 'Nao vacinado'}</Text>
-                </View>
-
-                <TouchableOpacity style={styles.actionPrimary}>
-                  <Text style={{ color: '#fff', fontWeight: 'bold' }}>Adotar</Text>
+            <View style={{ flex: 1 }}>
+              <View style={styles.imageWrapper}>
+                <Image source={petImageSource(selectedPet)} style={styles.sheetImage} />
+                
+                <TouchableOpacity style={styles.closeFloatingButton} onPress={closeSheet}>
+                  <AntDesign name="close" size={22} color="#fff" />
                 </TouchableOpacity>
               </View>
-            </ScrollView>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+                <View style={styles.sheetContent}>
+                  <View style={styles.titleContainer}>
+                    <Text style={[styles.sheetTitle, { color: isDark ? '#fff' : '#222' }]}>
+                      {selectedPet.name}
+                    </Text>
+                    <FontAwesome5 
+                      name={selectedPet.porte?.toLowerCase().includes('gato') ? 'cat' : 'dog'} 
+                      size={26} 
+                      color="#FF2BAA" 
+                    />
+                  </View>
+
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tagContainer}>
+                    <View style={[styles.tag, { backgroundColor: isDark ? '#333' : '#F0F4F8' }]}>
+                      <MaterialIcons name="hourglass-empty" size={16} color="#0E457D" style={styles.tagIcon} />
+                      <Text style={[styles.tagText, { color: isDark ? '#eee' : '#333' }]}>{selectedPet.idade}</Text>
+                    </View>
+
+                    <View style={[styles.tag, { backgroundColor: isDark ? '#333' : '#F0F4F8' }]}>
+                      <FontAwesome5 name="weight" size={14} color="#0E457D" style={styles.tagIcon} />
+                      <Text style={[styles.tagText, { color: isDark ? '#eee' : '#333' }]}>{selectedPet.porte}</Text>
+                    </View>
+
+                    <View style={[styles.tag, { backgroundColor: selectedPet.vacinado ? '#E8F5E9' : '#FFEBEE' }]}>
+                      <MaterialIcons 
+                        name={selectedPet.vacinado ? 'verified' : 'gpp-bad'} 
+                        size={16} 
+                        color={selectedPet.vacinado ? '#2E7D32' : '#C62828'} 
+                        style={styles.tagIcon} 
+                      />
+                      <Text style={[styles.tagText, { color: selectedPet.vacinado ? '#2E7D32' : '#C62828', fontWeight: '600' }]}>
+                        {selectedPet.vacinado ? 'Vacinado' : 'Não vacinado'}
+                      </Text>
+                    </View>
+                  </ScrollView>
+
+                  <View style={[styles.ongCard, { backgroundColor: isDark ? '#2D2D2D' : '#F9F9F9', borderColor: isDark ? '#444' : '#EAEAEA' }]}>
+                    <View style={styles.ongIconContainer}>
+                      <MaterialIcons name="storefront" size={20} color="#FF2BAA" />
+                    </View>
+                    <View>
+                      <Text style={styles.sectionTitle}>Instituição / ONG</Text>
+                      <Text style={[styles.ongName, { color: isDark ? '#BBB' : '#555' }]}>{selectedPet.ong}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>Sobre</Text>
+                    <Text style={[styles.descriptionText, { color: isDark ? '#CCC' : '#666' }]}>
+                      {selectedPet.description || 'Nenhuma descrição fornecida para este pet.'}
+                    </Text>
+                  </View>
+
+                  {/* Dispara o modal de passos explicativos */}
+                  <TouchableOpacity 
+                    style={styles.actionPrimary} 
+                    activeOpacity={0.8}
+                    onPress={openStepsModal}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>Adotar</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
           </Animated.View>
         </>
       )}
+
+      {/* MODAL EXPLICATIVO DOS PASSOS DA ADOÇÃO */}
+      <Modal
+        transparent
+        visible={stepsModalVisible}
+        animationType="none"
+        onRequestClose={closeStepsModal}
+      >
+        <View style={styles.stepsOverlay}>
+          <Animated.View
+            style={[
+              styles.modalStepsContainer,
+              {
+                backgroundColor: isDark ? '#1E1E1E' : '#FFFFFF',
+                opacity: stepsFadeAnim,
+                transform: [{ translateY: stepsSlideAnim }],
+              },
+            ]}
+          >
+            {selectedPet && (
+              <View style={{ flex: 1 }}>
+                <View style={styles.stepsImageWrapper}>
+                  <Image
+                    source={petImageSource(selectedPet)}
+                    style={styles.stepsModalImage}
+                  />
+                  <TouchableOpacity style={styles.closeFloatingButton} onPress={closeStepsModal}>
+                    <AntDesign name="close" size={22} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollContainer}>
+                  <View style={styles.stepsModalContent}>
+                    <Text style={[styles.stepsModalPetName, { color: isDark ? '#fff' : '#0E457D' }]}>
+                      {selectedPet.name}
+                    </Text>
+
+                    <Text style={[styles.stepsModalAge, { color: isDark ? '#DADADA' : '#666' }]}>
+                      {selectedPet.idade}
+                    </Text>
+
+                    <View style={styles.ongRow}>
+                      <Ionicons name="paw" size={16} color={isDark ? '#FF80AB' : '#FF2BAA'} />
+                      <Text style={[styles.stepsModalOng, { color: isDark ? '#BDBDBD' : '#777' }]}>
+                        {selectedPet.ong}
+                      </Text>
+                    </View>
+
+                    <Text style={[styles.emotionalText, { color: isDark ? '#F1F1F1' : '#444' }]}>
+                      Você está iniciando o processo de adoção deste pet ❤️
+                    </Text>
+
+                    {/* BOX DE ETAPAS */}
+                    <View style={[styles.stepsBox, { backgroundColor: isDark ? '#2A2A2A' : '#FAFAFA' }]}>
+                      <Text style={[styles.stepsTitle, { color: isDark ? '#fff' : '#222' }]}>
+                        Como funciona a adoção
+                      </Text>
+
+                      <View style={styles.stepsRow}>
+                        {['Solicitação', 'Análise', 'Entrevista', 'Finalização'].map((step, index) => (
+                          <View key={index} style={styles.stepItem}>
+                            <View style={[styles.stepCircle, { backgroundColor: isDark ? '#FF80AB' : '#FF2BAA' }]}>
+                              <Text style={styles.stepNumber}>{index + 1}</Text>
+                            </View>
+                            <Text style={[styles.stepText, { color: isDark ? '#DDD' : '#555' }]}>
+                              {step}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+
+                    {/* BOTÕES DE ENCAMINHAMENTO */}
+                    <TouchableOpacity
+                      onPress={handleContinueAdoption}
+                      style={[styles.continueButton, { backgroundColor: isDark ? '#FF80AB' : '#FF2BAA' }]}
+                    >
+                      <Text style={styles.continueText}>Continuar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity onPress={closeStepsModal} style={styles.cancelButton}>
+                      <Text style={[styles.cancelText, { color: isDark ? '#CFCFCF' : '#666' }]}>
+                        Cancelar
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+          </Animated.View>
+        </View>
+      </Modal>
 
       <BottomNav isDark={isDark} activePage="home" />
     </SafeAreaView>
@@ -428,48 +620,274 @@ const styles = StyleSheet.create({
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)'
+    backgroundColor: 'rgba(0,0,0,0.6)'
   },
 
   bottomSheet: {
     position: 'absolute',
     bottom: 0,
     width: '100%',
-    height: height * 0.85,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20
+    height: height,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+
+  imageWrapper: {
+    width: width,
+    height: height * 0.45,
+    position: 'relative',
   },
 
   sheetImage: {
     width: '100%',
-    height: 250
+    height: '100%',
+  },
+
+  closeFloatingButton: {
+    position: 'absolute',
+    top: 45,
+    left: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 99,
+  },
+
+  scrollContainer: {
+    flex: 1,
   },
 
   sheetContent: {
-    padding: 20
+    padding: 24
+  },
+
+  titleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 18,
   },
 
   sheetTitle: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 10
+  },
+
+  tagContainer: {
+    flexDirection: 'row',
+    marginBottom: 24,
+  },
+
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+
+  tagIcon: {
+    marginRight: 5,
+  },
+
+  tagText: {
+    fontSize: 14,
+  },
+
+  ongCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 24,
+  },
+
+  ongIconContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 43, 170, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+
+  ongName: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginTop: 2,
   },
 
   section: {
-    marginBottom: 15
+    marginBottom: 24
   },
 
   sectionTitle: {
+    fontSize: 13,
     fontWeight: 'bold',
-    marginBottom: 5
+    color: '#888',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 8
+  },
+
+  descriptionText: {
+    fontSize: 16,
+    lineHeight: 24,
   },
 
   actionPrimary: {
-    marginTop: 20,
+    flexDirection: 'row',
+    marginTop: 10,
     backgroundColor: '#FF2BAA',
-    padding: 15,
-    borderRadius: 15,
-    alignItems: 'center'
+    paddingVertical: 16,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF2BAA',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+    marginBottom: 40,
+  },
+
+  /* ESTILOS NOVOS DO FLUXO DE PASSOS (MODAL ADOÇÃO) */
+
+  stepsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.60)',
+  },
+
+  modalStepsContainer: {
+    width: width,
+    height: height,
+    flex: 1,
+  },
+
+  stepsImageWrapper: {
+    width: width,
+    height: height * 0.42,
+    position: 'relative',
+  },
+
+  stepsModalImage: {
+    width: '100%',
+    height: '100%',
+  },
+
+  stepsModalContent: {
+    padding: 24,
+  },
+
+  stepsModalPetName: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+
+  stepsModalAge: {
+    textAlign: 'center',
+    fontSize: 16,
+    marginTop: 5,
+  },
+
+  ongRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 5,
+  },
+
+  stepsModalOng: {
+    fontSize: 15,
+  },
+
+  emotionalText: {
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 24,
+    marginTop: 18,
+    fontWeight: '500',
+  },
+
+  stepsBox: {
+    marginTop: 24,
+    borderRadius: 22,
+    padding: 18,
+  },
+
+  stepsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+
+  stepsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+
+  stepItem: {
+    alignItems: 'center',
+    width: 70,
+  },
+
+  stepCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+
+  stepNumber: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+
+  stepText: {
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+
+  continueButton: {
+    marginTop: 28,
+    paddingVertical: 16,
+    borderRadius: 25,
+    alignItems: 'center',
+    shadowColor: '#FF2BAA',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+
+  continueText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: 'bold',
+  },
+
+  cancelButton: {
+    marginTop: 16,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+
+  cancelText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

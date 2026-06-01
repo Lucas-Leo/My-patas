@@ -827,7 +827,7 @@ const PerfilONG = () => {
                 : '#EDF5FF'
             }
           ]}
-          onPress={() => router.push('/gerenciarSolicitacoes')}
+          onPress={() => router.push('/solicitacoesAdocao')}
           activeOpacity={0.85}
         >
 
