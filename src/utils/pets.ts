@@ -52,6 +52,11 @@ export async function obterIdUsuarioLogado() {
   return usuario?.id || usuario?.idusuario || null;
 }
 
+export async function usuarioLogadoEhOng() {
+  const ongSalva = await AsyncStorage.getItem("ong");
+  return Boolean(ongSalva);
+}
+
 export function formatarIdadePet(idade?: number | string | null) {
   if (idade === null || idade === undefined || idade === "") {
     return "Idade nao informada";

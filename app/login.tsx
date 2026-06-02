@@ -48,6 +48,7 @@ export default function Login() {
   // MODAL SUCESSO LOGIN
   // ======================================================
   const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [successIsOng, setSuccessIsOng] = useState(false);
 
   // ======================================================
   // RECUPERAÇÃO SENHA
@@ -73,7 +74,7 @@ export default function Login() {
   // ======================================================
   useEffect(() => {
 
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval> | undefined;
 
     if (codeModalVisible && timer > 0) {
 
@@ -206,9 +207,12 @@ export default function Login() {
           "token-ficticio-123"
         );
 
+        await AsyncStorage.removeItem("ong");
+
         // ======================================================
         // ABRE MODAL SUCESSO
         // ======================================================
+        setSuccessIsOng(false);
         setSuccessModalVisible(true);
 
         // Fecha sozinho após 2 segundos
@@ -259,17 +263,22 @@ export default function Login() {
         response.data.token
       );
 
-      if (response.data.ong) {
+      const possuiOng = Boolean(response.data.ong);
+
+      if (possuiOng) {
 
         await AsyncStorage.setItem(
           "ong",
           JSON.stringify(response.data.ong)
         );
+      } else {
+        await AsyncStorage.removeItem("ong");
       }
 
       // ======================================================
       // ABRE MODAL SUCESSO
       // ======================================================
+      setSuccessIsOng(possuiOng);
       setSuccessModalVisible(true);
 
       // Fecha sozinho após 2 segundos
@@ -277,9 +286,9 @@ export default function Login() {
 
         setSuccessModalVisible(false);
 
-        router.push("/home");
+        router.push(possuiOng ? "/perfilONG" : "/home");
 
-      }, 2000);
+      }, possuiOng ? 4500 : 2000);
 
     } catch (error) {
 
@@ -615,7 +624,9 @@ export default function Login() {
             </Text>
 
             <Text style={styles.successDescription}>
-              Você será redirecionado em instantes.
+              {successIsOng
+                ? "Conta de ONG identificada. Para gerenciar pets, solicitacoes e dados da ONG, acesse pelo site. No app o perfil fica apenas para consulta."
+                : "Você será redirecionado em instantes."}
             </Text>
 
           </View>

@@ -71,7 +71,7 @@ export default function DetalhesSolicitacaoONG() {
     'Entrevista': { label: 'Entrevista agendada', color: '#8B5CF6', bg: '#EFE7FF', icon: 'calendar-outline' },
     'Visita': { label: 'Visita agendada', color: '#3B82F6', bg: '#EFF6FF', icon: 'home-outline' },
     'Aprovado': { label: 'Aprovado', color: '#22C55E', bg: '#DCFCE7', icon: 'checkmark-circle-outline' },
-    'Entregue': { label: 'Pet entregue! ❤️', color: '#EC4899', bg: '#FCE7F3', icon: 'heart-done-outline' },
+    'Entregue': { label: 'Pet entregue! ❤️', color: '#EC4899', bg: '#FCE7F3', icon: 'heart-outline' },
     'Reprovado': { label: 'Reprovado', color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
   };
 

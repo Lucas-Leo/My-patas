@@ -1,3 +1,634 @@
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Image,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import { useThemeContext } from '@/context/ThemeContext';
+import BottomNav from '@/components/BottomNav';
+import api from '../src/service/api';
+
+const profileImageReadonly = require('@/assets/images/perfil.png');
+const logoAppReadonly = require('@/assets/images/LogoPataAzul.png');
+
+type OngBanco = {
+  id?: number;
+  idong?: number;
+  nome?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  descricao?: string | null;
+  foto?: string | null;
+  idendereco?: number | null;
+  fk_idendereco?: number | null;
+  rua?: string | null;
+  numero?: string | number | null;
+  bairro?: string | null;
+  cidade?: string | null;
+  cep?: string | null;
+  complemento?: string | null;
+  sigla?: string | null;
+  tipo?: string | null;
+  estado?: {
+    sigla?: string | null;
+  } | null;
+  endereco?: {
+    rua?: string | null;
+    numero?: string | number | null;
+    bairro?: string | null;
+    cidade?: string | null;
+    cep?: string | null;
+    complemento?: string | null;
+    estado?: string | null;
+  } | null;
+};
+
+type UsuarioSessaoBanco = {
+  id?: number;
+  idusuario?: number;
+};
+
+type PerfilOngView = {
+  id: number | null;
+  nome: string;
+  email: string;
+  telefone: string;
+  descricao: string;
+  foto: string | null;
+  tipo: string;
+  endereco: {
+    cidade: string;
+    estado: string;
+    bairro: string;
+    rua: string;
+    numero: string;
+    cep: string;
+    complemento: string;
+  };
+};
+
+const vazio = 'Nao informado';
+
+function normalizarOngBanco(data: unknown): OngBanco | null {
+  if (Array.isArray(data)) {
+    return (data[0] as OngBanco) || null;
+  }
+
+  if (data && typeof data === 'object' && 'data' in data) {
+    const resposta = data as { data?: OngBanco | OngBanco[] };
+    return normalizarOngBanco(resposta.data);
+  }
+
+  if (data && typeof data === 'object') {
+    return data as OngBanco;
+  }
+
+  return null;
+}
+
+function montarPerfilOng(ong: OngBanco): PerfilOngView {
+  const endereco = ong.endereco || {};
+  const id = Number(ong.idong || ong.id);
+
+  return {
+    id: Number.isFinite(id) && id > 0 ? id : null,
+    nome: ong.nome || vazio,
+    email: ong.email || vazio,
+    telefone: ong.telefone || vazio,
+    descricao: ong.descricao || vazio,
+    foto: ong.foto || null,
+    tipo: ong.tipo || 'ONG',
+    endereco: {
+      cidade: endereco.cidade || ong.cidade || vazio,
+      estado: ong.estado?.sigla || ong.sigla || endereco.estado || vazio,
+      bairro: endereco.bairro || ong.bairro || vazio,
+      rua: endereco.rua || ong.rua || vazio,
+      numero: String(endereco.numero || ong.numero || vazio),
+      cep: endereco.cep || ong.cep || vazio,
+      complemento: endereco.complemento || ong.complemento || vazio,
+    },
+  };
+}
+
+export default function PerfilONG() {
+  const router = useRouter();
+  const { theme, toggleTheme } = useThemeContext();
+  const isDark = theme === 'dark';
+
+  const [perfil, setPerfil] = useState<PerfilOngView | null>(null);
+  const [totalPets, setTotalPets] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState('');
+
+  useEffect(() => {
+    carregarPerfilOng();
+  }, []);
+
+  async function descobrirIdOngNoBanco() {
+    const usuarioSalvo = await AsyncStorage.getItem('usuario');
+
+    if (usuarioSalvo) {
+      const usuario = JSON.parse(usuarioSalvo) as UsuarioSessaoBanco;
+      const idUsuario = Number(usuario.id || usuario.idusuario);
+
+      if (Number.isFinite(idUsuario) && idUsuario > 0) {
+        try {
+          const response = await api.get(`/ongs/verificarOng/${idUsuario}`);
+          const idBanco = Number(response.data?.conta?.fk_idong);
+
+          if (Number.isFinite(idBanco) && idBanco > 0) {
+            return idBanco;
+          }
+        } catch (error) {
+          // Se o usuario nao tiver vinculo pela rota, tenta o id salvo da ONG.
+        }
+      }
+    }
+
+    const ongSalva = await AsyncStorage.getItem('ong');
+
+    if (!ongSalva) {
+      return null;
+    }
+
+    const ongSessao = JSON.parse(ongSalva) as OngBanco;
+    const idSessao = Number(ongSessao.idong || ongSessao.id);
+
+    return Number.isFinite(idSessao) && idSessao > 0 ? idSessao : null;
+  }
+
+  async function carregarTotalPets(idOng: number) {
+    try {
+      const response = await api.get(`/ongs/contar/${idOng}`);
+      const total = Number(response.data?.total ?? response.data);
+      setTotalPets(Number.isFinite(total) ? total : 0);
+    } catch (error) {
+      setTotalPets(0);
+    }
+  }
+
+  async function carregarPerfilOng() {
+    try {
+      setLoading(true);
+      setErro('');
+
+      const idOng = await descobrirIdOngNoBanco();
+
+      if (!idOng) {
+        setPerfil(null);
+        setErro('Nao foi possivel identificar uma ONG vinculada a esta conta.');
+        return;
+      }
+
+      const response = await api.get(`/ongs/${idOng}`);
+      const ongBanco = normalizarOngBanco(response.data);
+
+      if (!ongBanco) {
+        setPerfil(null);
+        setErro('ONG nao encontrada no banco.');
+        return;
+      }
+
+      setPerfil(montarPerfilOng(ongBanco));
+      await carregarTotalPets(idOng);
+    } catch (error) {
+      const erroApi = error as {
+        response?: { data?: { message?: string; erro?: string } };
+        message?: string;
+      };
+
+      setPerfil(null);
+      setErro(
+        erroApi.response?.data?.message ||
+        erroApi.response?.data?.erro ||
+        erroApi.message ||
+        'Nao foi possivel carregar os dados da ONG.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function sairDaConta() {
+    await AsyncStorage.multiRemove(['usuario', 'token', 'ong', 'fotoPerfilONG']);
+    router.replace('/login');
+  }
+
+  const cardColor = isDark ? '#1E1E1E' : '#FFFFFF';
+  const textColor = isDark ? '#FFFFFF' : '#0E457D';
+  const mutedColor = isDark ? '#BBBBBB' : '#666666';
+  const borderColor = isDark ? '#303030' : '#E6ECF2';
+
+  const detalhes = perfil
+    ? [
+        { label: 'Nome da ONG', value: perfil.nome, icon: 'office-building-outline' },
+        { label: 'E-mail', value: perfil.email, icon: 'email-outline' },
+        { label: 'Telefone', value: perfil.telefone, icon: 'phone-outline' },
+        { label: 'Descricao', value: perfil.descricao, icon: 'text-box-outline' },
+        { label: 'Cidade', value: perfil.endereco.cidade, icon: 'map-marker-outline' },
+        { label: 'Estado', value: perfil.endereco.estado, icon: 'map-outline' },
+        { label: 'Bairro', value: perfil.endereco.bairro, icon: 'home-map-marker' },
+        { label: 'Rua', value: perfil.endereco.rua, icon: 'road-variant' },
+        { label: 'Numero', value: perfil.endereco.numero, icon: 'numeric' },
+        { label: 'CEP', value: perfil.endereco.cep, icon: 'map-marker-distance' },
+        { label: 'Complemento', value: perfil.endereco.complemento, icon: 'information-outline' },
+      ]
+    : [];
+
+  return (
+    <SafeAreaView
+      style={[
+        readonlyStyles.safeArea,
+        { backgroundColor: isDark ? '#121212' : '#F4F7FB' },
+      ]}
+    >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={readonlyStyles.container}
+      >
+        <View style={readonlyStyles.header}>
+          <Image source={logoAppReadonly} style={readonlyStyles.logo} />
+        </View>
+
+        {loading ? (
+          <View style={[readonlyStyles.stateCard, { backgroundColor: cardColor }]}>
+            <ActivityIndicator color="#FF42B3" size="large" />
+            <Text style={[readonlyStyles.stateText, { color: mutedColor }]}>
+              Carregando dados da ONG no banco...
+            </Text>
+          </View>
+        ) : erro ? (
+          <View style={[readonlyStyles.stateCard, { backgroundColor: cardColor }]}>
+            <Icon name="alert-circle-outline" size={36} color="#FF42B3" />
+            <Text style={[readonlyStyles.stateTitle, { color: textColor }]}>
+              Perfil indisponivel
+            </Text>
+            <Text style={[readonlyStyles.stateText, { color: mutedColor }]}>
+              {erro}
+            </Text>
+            <TouchableOpacity style={readonlyStyles.primaryButton} onPress={carregarPerfilOng}>
+              <Icon name="refresh" size={20} color="#FFFFFF" />
+              <Text style={readonlyStyles.primaryButtonText}>Tentar novamente</Text>
+            </TouchableOpacity>
+          </View>
+        ) : perfil ? (
+          <>
+            <View style={[readonlyStyles.profileCard, { backgroundColor: cardColor }]}>
+              <Image
+                source={perfil.foto ? { uri: perfil.foto } : profileImageReadonly}
+                style={readonlyStyles.profilePhoto}
+              />
+
+              <View style={readonlyStyles.verifiedBadge}>
+                <Icon name="shield-check" size={16} color="#FFFFFF" />
+                <Text style={readonlyStyles.verifiedText}>ONG cadastrada</Text>
+              </View>
+
+              <Text style={[readonlyStyles.profileName, { color: textColor }]}>
+                {perfil.nome}
+              </Text>
+
+              <Text style={[readonlyStyles.profileEmail, { color: mutedColor }]}>
+                {perfil.email}
+              </Text>
+
+              <View style={readonlyStyles.infoTagsContainer}>
+                <View style={readonlyStyles.infoTag}>
+                  <Icon name="map-marker-outline" size={16} color="#FF42B3" />
+                  <Text style={readonlyStyles.infoTagText}>
+                    {perfil.endereco.cidade}
+                  </Text>
+                </View>
+
+                <View style={readonlyStyles.infoTag}>
+                  <Icon name="paw-outline" size={16} color="#FF42B3" />
+                  <Text style={readonlyStyles.infoTagText}>
+                    {perfil.tipo}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={[readonlyStyles.statsCard, { backgroundColor: cardColor }]}>
+              <Icon name="paw" size={26} color="#FF42B3" />
+              <View>
+                <Text style={[readonlyStyles.statNumber, { color: textColor }]}>
+                  {totalPets}
+                </Text>
+                <Text style={[readonlyStyles.statLabel, { color: mutedColor }]}>
+                  Pets cadastrados no banco
+                </Text>
+              </View>
+            </View>
+
+            <View style={[readonlyStyles.infoCard, { backgroundColor: cardColor }]}>
+              <Text style={[readonlyStyles.sectionTitle, { color: textColor }]}>
+                Informacoes da ONG
+              </Text>
+
+              {detalhes.map((item, index) => (
+                <View key={item.label}>
+                  <View style={readonlyStyles.fieldItem}>
+                    <Icon name={item.icon as any} size={22} color="#FF42B3" />
+                    <View style={readonlyStyles.fieldTextBox}>
+                      <Text style={[readonlyStyles.fieldLabel, { color: mutedColor }]}>
+                        {item.label}
+                      </Text>
+                      <Text style={[readonlyStyles.fieldValue, { color: isDark ? '#FFFFFF' : '#111111' }]}>
+                        {item.value}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {index !== detalhes.length - 1 ? (
+                    <View style={[readonlyStyles.divider, { backgroundColor: borderColor }]} />
+                  ) : null}
+                </View>
+              ))}
+            </View>
+
+            <View style={[readonlyStyles.settingsCard, { backgroundColor: cardColor }]}>
+              <TouchableOpacity
+                style={readonlyStyles.settingItem}
+                onPress={() => router.push('/quests')}
+              >
+                <View style={readonlyStyles.settingLeft}>
+                  <Icon name="help-circle-outline" size={24} color="#FF42B3" />
+                  <Text style={[readonlyStyles.settingText, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+                    Perguntas frequentes
+                  </Text>
+                </View>
+                <Icon name="chevron-right" size={24} color="#999999" />
+              </TouchableOpacity>
+
+              <View style={[readonlyStyles.divider, { backgroundColor: borderColor }]} />
+
+              <View style={readonlyStyles.settingItem}>
+                <View style={readonlyStyles.settingLeft}>
+                  <Icon
+                    name={isDark ? 'weather-night' : 'weather-sunny'}
+                    size={24}
+                    color="#FF42B3"
+                  />
+                  <Text style={[readonlyStyles.settingText, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+                    Modo escuro
+                  </Text>
+                </View>
+
+                <Switch
+                  value={isDark}
+                  onValueChange={toggleTheme}
+                  thumbColor="#FFFFFF"
+                  trackColor={{ false: '#B0BEC5', true: '#FF42B3' }}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity style={readonlyStyles.logoutButton} onPress={sairDaConta}>
+              <Icon name="logout" size={20} color="#FFFFFF" />
+              <Text style={readonlyStyles.logoutButtonText}>Sair da conta</Text>
+            </TouchableOpacity>
+          </>
+        ) : null}
+      </ScrollView>
+
+      <BottomNav isDark={isDark} activePage="perfil" />
+    </SafeAreaView>
+  );
+}
+
+const readonlyStyles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
+  container: {
+    alignItems: 'center',
+    paddingBottom: 140,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 10,
+    marginTop: 40,
+  },
+  logo: {
+    height: 90,
+    width: 200,
+  },
+  stateCard: {
+    alignItems: 'center',
+    borderRadius: 22,
+    marginTop: 18,
+    padding: 26,
+    width: '90%',
+  },
+  stateTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 14,
+    textAlign: 'center',
+  },
+  stateText: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  primaryButton: {
+    alignItems: 'center',
+    backgroundColor: '#0E457D',
+    borderRadius: 16,
+    flexDirection: 'row',
+    gap: 8,
+    height: 48,
+    justifyContent: 'center',
+    marginTop: 22,
+    paddingHorizontal: 18,
+  },
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  profileCard: {
+    alignItems: 'center',
+    borderRadius: 24,
+    elevation: 5,
+    marginTop: 15,
+    paddingVertical: 30,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    width: '90%',
+  },
+  profilePhoto: {
+    borderColor: '#FF42B3',
+    borderRadius: 65,
+    borderWidth: 4,
+    height: 130,
+    width: 130,
+  },
+  verifiedBadge: {
+    alignItems: 'center',
+    backgroundColor: '#0E457D',
+    borderRadius: 50,
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  verifiedText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  profileName: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 18,
+    textAlign: 'center',
+  },
+  profileEmail: {
+    fontSize: 15,
+    marginTop: 5,
+  },
+  infoTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    justifyContent: 'center',
+    marginTop: 18,
+  },
+  infoTag: {
+    alignItems: 'center',
+    backgroundColor: '#F4F7FB',
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  infoTagText: {
+    color: '#0E457D',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  statsCard: {
+    alignItems: 'center',
+    borderRadius: 22,
+    elevation: 4,
+    flexDirection: 'row',
+    gap: 14,
+    marginTop: 18,
+    padding: 20,
+    shadowColor: '#000000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    width: '90%',
+  },
+  statNumber: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  statLabel: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  infoCard: {
+    borderRadius: 24,
+    elevation: 5,
+    marginTop: 25,
+    padding: 24,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    width: '90%',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 24,
+  },
+  fieldItem: {
+    alignItems: 'flex-start',
+    flexDirection: 'row',
+    gap: 14,
+  },
+  fieldTextBox: {
+    flex: 1,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  fieldValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 18,
+    width: '100%',
+  },
+  settingsCard: {
+    borderRadius: 24,
+    elevation: 5,
+    marginTop: 20,
+    padding: 24,
+    shadowColor: '#000000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    width: '90%',
+  },
+  settingItem: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  settingLeft: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    flex: 1,
+  },
+  settingText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginLeft: 12,
+  },
+  logoutButton: {
+    alignItems: 'center',
+    backgroundColor: '#0E457D',
+    borderRadius: 18,
+    flexDirection: 'row',
+    gap: 10,
+    height: 58,
+    justifyContent: 'center',
+    marginTop: 25,
+    width: '90%',
+  },
+  logoutButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
+/*
+Codigo antigo comentado a pedido do usuario. A nova versao acima remove funcoes,
+botoes e entradas de alteracao de dados, e renderiza somente informacoes reais
+buscadas na API.
+
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
@@ -12,6 +643,7 @@ import {
   TextInput,
   Modal,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,20 +652,54 @@ import { useRouter } from 'expo-router';
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import * as ImagePicker from 'expo-image-picker';
+import api from '../src/service/api';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 type ONGPerfil = {
+  id?: number;
+  idong?: number;
+  id_responsavel?: number | null;
+  fk_idresponsavel?: number | null;
   nome?: string;
   email?: string;
   telefone?: string;
-  instagram?: string;
-  horario?: string;
-  categoria?: string;
-  endereco?: {
-    cidade?: string;
+  descricao?: string;
+  foto?: string | null;
+  banner?: string | null;
+  idendereco?: number;
+  fk_idendereco?: number;
+  rua?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  cep?: string;
+  complemento?: string;
+  sigla?: string;
+  tipo?: string;
+  estado?: {
+    sigla?: string;
   };
+  endereco?: {
+    rua?: string;
+    numero?: string;
+    bairro?: string;
+    cidade?: string;
+    cep?: string;
+    complemento?: string;
+    estado?: string;
+  };
+};
+
+type UsuarioSessao = {
+  id?: number;
+  idusuario?: number;
+};
+
+type IdResponse = {
+  id?: number;
+  message?: string;
 };
 
 const PerfilONG = () => {
@@ -44,13 +710,24 @@ const PerfilONG = () => {
 
   const isDark = theme === 'dark';
 
-  const [nome, setNome] = useState('Instituto Patinhas Felizes');
-  const [email, setEmail] = useState('contato@patinhas.org');
-  const [telefone, setTelefone] = useState('(16) 99999-9999');
-  const [cidade, setCidade] = useState('Matão - SP');
-  const [instagram, setInstagram] = useState('@patinhasfelizes');
-  const [horario, setHorario] = useState('08h às 18h');
-  const [categoria, setCategoria] = useState('ONG Parceira');
+  const [ongId, setOngId] = useState<number | null>(null);
+  const [fkIdEndereco, setFkIdEndereco] = useState<number | null>(null);
+
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [descricao, setDescricao] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [estado, setEstado] = useState('');
+  const [bairro, setBairro] = useState('');
+  const [rua, setRua] = useState('');
+  const [numero, setNumero] = useState('');
+  const [cep, setCep] = useState('');
+  const [complemento, setComplemento] = useState('');
+  const [categoria, setCategoria] = useState('');
+
+  const [totalPets, setTotalPets] = useState(0);
+  const [loadingPerfil, setLoadingPerfil] = useState(true);
 
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
@@ -100,48 +777,169 @@ const PerfilONG = () => {
 
   }, [feedbackVisible]);
 
-  async function carregarONG() {
+  function abrirFeedback(
+    emoji: string,
+    title: string,
+    message: string,
+    action: 'save' | 'logout' | 'delete' | 'deleted' | null = 'save'
+  ) {
+    setFeedbackEmoji(emoji);
+    setFeedbackTitle(title);
+    setFeedbackMessage(message);
+    setFeedbackAction(action);
+    setFeedbackVisible(true);
+  }
 
-    const ongSalva = await AsyncStorage.getItem('ong');
+  function obterMensagemErro(error: unknown) {
+    const erro = error as {
+      response?: { data?: { message?: string; erro?: string } };
+      message?: string;
+    };
 
-    if (ongSalva) {
+    return (
+      erro.response?.data?.message ||
+      erro.response?.data?.erro ||
+      erro.message ||
+      'Nao foi possivel concluir a operacao.'
+    );
+  }
 
-      const ong = JSON.parse(ongSalva) as ONGPerfil;
-
-      setNome(ong.nome || '');
-      setEmail(ong.email || '');
-      setTelefone(ong.telefone || '');
-      setInstagram(ong.instagram || '');
-      setHorario(ong.horario || '');
-      setCategoria(ong.categoria || 'ONG Parceira');
-      setCidade(ong.endereco?.cidade || '');
+  function normalizarOng(data: unknown): ONGPerfil | null {
+    if (Array.isArray(data)) {
+      return (data[0] as ONGPerfil) || null;
     }
 
-    const fotoSalva = await AsyncStorage.getItem('fotoPerfilONG');
+    if (data && typeof data === 'object' && 'data' in data) {
+      const resposta = data as { data?: ONGPerfil | ONGPerfil[] };
+      return normalizarOng(resposta.data);
+    }
 
-    if (fotoSalva) {
-      setFotoPerfil(fotoSalva);
+    return (data as ONGPerfil) || null;
+  }
+
+  function preencherOng(ong: ONGPerfil) {
+    const id = Number(ong.idong || ong.id);
+    const endereco = ong.endereco || {};
+    const siglaEstado = ong.estado?.sigla || ong.sigla || endereco.estado || '';
+
+    setOngId(Number.isFinite(id) ? id : null);
+    setFkIdEndereco(Number(ong.fk_idendereco || ong.idendereco) || null);
+    setNome(ong.nome || '');
+    setEmail(ong.email || '');
+    setTelefone(ong.telefone || '');
+    setDescricao(ong.descricao || '');
+    setFotoPerfil(ong.foto || null);
+    setCidade(endereco.cidade || ong.cidade || '');
+    setEstado(siglaEstado);
+    setBairro(endereco.bairro || ong.bairro || '');
+    setRua(endereco.rua || ong.rua || '');
+    setNumero(endereco.numero || ong.numero || '');
+    setCep(endereco.cep || ong.cep || '');
+    setComplemento(endereco.complemento || ong.complemento || '');
+    setCategoria(ong.tipo || 'ONG');
+  }
+
+  async function carregarTotalPets(id: number) {
+    try {
+      const response = await api.get(`/ongs/contar/${id}`);
+      const total = Number(response.data?.total ?? response.data);
+
+      setTotalPets(Number.isFinite(total) ? total : 0);
+    } catch (error) {
+      setTotalPets(0);
+    }
+  }
+
+  async function descobrirIdOng() {
+    const [ongSalva, usuarioSalvo] = await Promise.all([
+      AsyncStorage.getItem('ong'),
+      AsyncStorage.getItem('usuario')
+    ]);
+
+    if (ongSalva) {
+      const ongSessao = JSON.parse(ongSalva) as ONGPerfil;
+      const idSessao = Number(ongSessao.idong || ongSessao.id);
+
+      if (Number.isFinite(idSessao) && idSessao > 0) {
+        return idSessao;
+      }
+    }
+
+    if (!usuarioSalvo) {
+      return null;
+    }
+
+    const usuario = JSON.parse(usuarioSalvo) as UsuarioSessao;
+    const idUsuario = Number(usuario.id || usuario.idusuario);
+
+    if (!Number.isFinite(idUsuario) || idUsuario <= 0) {
+      return null;
+    }
+
+    const response = await api.get(`/ongs/verificarOng/${idUsuario}`);
+    const idBanco = Number(response.data?.conta?.fk_idong);
+
+    return Number.isFinite(idBanco) && idBanco > 0 ? idBanco : null;
+  }
+
+  async function carregarONG() {
+    try {
+      setLoadingPerfil(true);
+
+      const id = await descobrirIdOng();
+
+      if (!id) {
+        abrirFeedback(
+          '!',
+          'ONG nao encontrada',
+          'Nao foi possivel identificar uma ONG vinculada a sua conta.',
+          'save'
+        );
+        return;
+      }
+
+      const response = await api.get(`/ongs/${id}`);
+      const ong = normalizarOng(response.data);
+
+      if (!ong) {
+        throw new Error('ONG nao encontrada no banco.');
+      }
+
+      preencherOng(ong);
+      await carregarTotalPets(id);
+    } catch (error) {
+      abrirFeedback(
+        '!',
+        'Erro ao carregar ONG',
+        obterMensagemErro(error),
+        'save'
+      );
+    } finally {
+      setLoadingPerfil(false);
     }
   }
 
   async function alterarFotoPerfil() {
+
+    if (!ongId) {
+      abrirFeedback(
+        '!',
+        'ONG nao carregada',
+        'Carregue o perfil da ONG antes de alterar a foto.'
+      );
+      return;
+    }
 
     const permissao =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (!permissao.granted) {
 
-      setFeedbackEmoji('📷');
-
-      setFeedbackTitle('Permissão necessária');
-
-      setFeedbackMessage(
-        'Precisamos da permissão para acessar suas fotos.'
+      abrirFeedback(
+        '!',
+        'Permissao necessaria',
+        'Precisamos da permissao para acessar suas fotos.'
       );
-
-      setFeedbackAction('save');
-
-      setFeedbackVisible(true);
 
       return;
     }
@@ -163,25 +961,45 @@ const PerfilONG = () => {
     }
 
     const novaFoto = resultado.assets[0].uri;
+    const nomeArquivo = novaFoto.split('/').pop() || `ong-${ongId}.jpg`;
+    const extensao = nomeArquivo.split('.').pop()?.toLowerCase() || 'jpg';
+    const tipoArquivo =
+      resultado.assets[0].mimeType ||
+      `image/${extensao === 'jpg' ? 'jpeg' : extensao}`;
 
-    setFotoPerfil(novaFoto);
+    const formData = new FormData();
 
-    await AsyncStorage.setItem(
-      'fotoPerfilONG',
-      novaFoto
-    );
+    formData.append('foto', {
+      uri: novaFoto,
+      name: nomeArquivo,
+      type: tipoArquivo,
+    } as any);
 
-    setFeedbackEmoji('🖼️');
+    try {
+      const response = await api.patch(
+        `/ongs/foto/${ongId}`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
-    setFeedbackTitle('Logo updated');
+      setFotoPerfil(response.data?.path || novaFoto);
 
-    setFeedbackMessage(
-      'A foto institucional da ONG foi atualizada com sucesso.'
-    );
-
-    setFeedbackAction('save');
-
-    setFeedbackVisible(true);
+      abrirFeedback(
+        'OK',
+        'Foto atualizada',
+        'A foto institucional da ONG foi salva no banco.'
+      );
+    } catch (error) {
+      abrirFeedback(
+        '!',
+        'Erro ao atualizar foto',
+        obterMensagemErro(error)
+      );
+    }
   }
 
   function openEditModal(field: string, currentValue: string) {
@@ -191,48 +1009,129 @@ const PerfilONG = () => {
     setModalVisible(true);
   }
 
-  async function saveEdit() {
+  function extrairId(resposta: IdResponse, nomeEntidade: string) {
+    const id = Number(resposta.id);
 
-    switch (editingField) {
-
-      case 'nome':
-        setNome(tempValue);
-        break;
-
-      case 'email':
-        setEmail(tempValue);
-        break;
-
-      case 'telefone':
-        setTelefone(tempValue);
-        break;
-
-      case 'cidade':
-        setCidade(tempValue);
-        break;
-
-      case 'instagram':
-        setInstagram(tempValue);
-        break;
-
-      case 'horario':
-        setHorario(tempValue);
-        break;
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new Error(`Nao foi possivel criar ${nomeEntidade}.`);
     }
 
-    setModalVisible(false);
+    return id;
+  }
 
-    setFeedbackEmoji('✅');
+  function separarCidadeEstado(valor: string) {
+    const partes = valor.split('-');
+    const cidadeNova = partes[0]?.trim() || '';
+    const estadoNovo = partes[1]?.trim().toUpperCase() || estado.trim().toUpperCase();
 
-    setFeedbackTitle('Informações atualizadas');
+    return { cidadeNova, estadoNovo };
+  }
 
-    setFeedbackMessage(
-      'Os dados da ONG foram atualizados com sucesso.'
-    );
+  async function criarEnderecoParaCidade(cidadeNova: string, estadoNovo: string) {
+    if (!cidadeNova || !estadoNovo || !bairro || !rua || !numero || !cep) {
+      throw new Error('Endereco da ONG incompleto para alterar a cidade.');
+    }
 
-    setFeedbackAction('save');
+    const estadoResponse = await api.post<IdResponse>('/estados', {
+      sigla: estadoNovo,
+      estado: estadoNovo
+    });
+    const idEstado = extrairId(estadoResponse.data, 'o estado');
 
-    setFeedbackVisible(true);
+    const cidadeResponse = await api.post<IdResponse>('/cidades', {
+      cidade: cidadeNova,
+      fk_idestado: idEstado
+    });
+    const idCidade = extrairId(cidadeResponse.data, 'a cidade');
+
+    const bairroResponse = await api.post<IdResponse>('/bairros', {
+      bairro,
+      fk_idcidade: idCidade
+    });
+    const idBairro = extrairId(bairroResponse.data, 'o bairro');
+
+    const ruaResponse = await api.post<IdResponse>('/ruas', {
+      rua,
+      fk_idbairro: idBairro
+    });
+    const idRua = extrairId(ruaResponse.data, 'a rua');
+
+    const enderecoResponse = await api.post<IdResponse>('/enderecos', {
+      fk_idcidade: idCidade,
+      fk_idbairro: idBairro,
+      fk_idrua: idRua,
+      fk_idestado: idEstado,
+      numero,
+      cep,
+      complemento
+    });
+
+    return extrairId(enderecoResponse.data, 'o endereco');
+  }
+
+  async function saveEdit() {
+    if (!ongId) {
+      abrirFeedback(
+        '!',
+        'ONG nao carregada',
+        'Carregue o perfil da ONG antes de alterar os dados.'
+      );
+      return;
+    }
+
+    const valor = tempValue.trim();
+    const payload: {
+      nome?: string;
+      email?: string;
+      telefone?: string;
+      descricao?: string;
+      fk_idendereco?: number;
+    } = {};
+
+    try {
+      switch (editingField) {
+        case 'nome':
+          payload.nome = valor;
+          break;
+
+        case 'email':
+          payload.email = valor.toLowerCase();
+          break;
+
+        case 'telefone':
+          payload.telefone = valor;
+          break;
+
+        case 'descricao':
+          payload.descricao = valor;
+          break;
+
+        case 'cidade': {
+          const { cidadeNova, estadoNovo } = separarCidadeEstado(valor);
+          payload.fk_idendereco = await criarEnderecoParaCidade(cidadeNova, estadoNovo);
+          break;
+        }
+
+        default:
+          throw new Error('Campo invalido para edicao.');
+      }
+
+      await api.put(`/ongs/${ongId}`, payload);
+      setModalVisible(false);
+      await carregarONG();
+
+      abrirFeedback(
+        'OK',
+        'Informacoes atualizadas',
+        'Os dados da ONG foram salvos no banco.'
+      );
+    } catch (error) {
+      abrirFeedback(
+        '!',
+        'Erro ao salvar',
+        obterMensagemErro(error)
+      );
+    }
   }
 
   function logout() {
@@ -904,7 +1803,7 @@ const PerfilONG = () => {
                 : '#FFFFFF'
             }
           ]}
-          onPress={() => router.push('/editarPerfilONG')}
+          onPress={() => router.push('/perfilONG')}
           activeOpacity={0.8}
         >
 
@@ -1573,3 +2472,4 @@ const styles = StyleSheet.create({
 });
 
 export default PerfilONG;
+*/

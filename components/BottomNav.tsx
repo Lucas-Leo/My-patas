@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -48,6 +49,16 @@ export default function BottomNav({ isDark, activePage }: BottomNavProps) {
   const defaultColor = isDark ? '#90CAF9' : '#0E457D';
   const activeColor = isDark ? '#BBDEFB' : '#0E457D';
 
+  async function handleNavPress(item: typeof navItems[number]) {
+    if (item.key === 'perfil') {
+      const ongSalva = await AsyncStorage.getItem('ong');
+      router.push(ongSalva ? '/perfilONG' : '/perfil');
+      return;
+    }
+
+    router.push(item.route);
+  }
+
   return (
     <View style={[styles.bottomNav, { backgroundColor: isDark ? '#181818' : '#fff' }]}>
       {navItems.map((item) => {
@@ -55,7 +66,7 @@ export default function BottomNav({ isDark, activePage }: BottomNavProps) {
         const color = isActive ? activeColor : defaultColor;
 
         return (
-          <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => router.push(item.route)}>
+          <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => handleNavPress(item)}>
             {item.renderIcon(color)}
             <View
               style={[

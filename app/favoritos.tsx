@@ -20,7 +20,7 @@ import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import { useRouter } from 'expo-router';
 import api from '../src/service/api';
-import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
+import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado, usuarioLogadoEhOng } from '../src/utils/pets';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
@@ -91,7 +91,24 @@ export default function Favoritos() {
     }
   }
 
-  const openModal = (pet: any) => {
+  async function bloquearAdocaoParaOng() {
+    if (!(await usuarioLogadoEhOng())) {
+      return false;
+    }
+
+    Alert.alert(
+      'Adocao indisponivel para ONGs',
+      'Contas de ONG nao podem iniciar processos de adocao pelo app. Para gerenciar a ONG, acesse pelo site.'
+    );
+
+    return true;
+  }
+
+  const openModal = async (pet: any) => {
+    if (await bloquearAdocaoParaOng()) {
+      return;
+    }
+
     setSelectedPet(pet);
     setModalVisible(true);
 
@@ -128,7 +145,12 @@ export default function Favoritos() {
     });
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (await bloquearAdocaoParaOng()) {
+      closeModal();
+      return;
+    }
+
     closeModal();
 
     setTimeout(() => {

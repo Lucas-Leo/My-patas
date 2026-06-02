@@ -19,7 +19,7 @@ import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import { useRouter } from 'expo-router';
 import api from '../src/service/api';
-import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
+import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado, usuarioLogadoEhOng } from '../src/utils/pets';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 const { width, height } = Dimensions.get('window');
@@ -193,7 +193,24 @@ export default function SwipeScreen() {
   };
 
   // Funções para abrir/fechar o Modal explicativo de Adoção
-  const openStepsModal = () => {
+  async function bloquearAdocaoParaOng() {
+    if (!(await usuarioLogadoEhOng())) {
+      return false;
+    }
+
+    Alert.alert(
+      'Adocao indisponivel para ONGs',
+      'Contas de ONG nao podem iniciar processos de adocao pelo app. Para gerenciar a ONG, acesse pelo site.'
+    );
+
+    return true;
+  }
+
+  const openStepsModal = async () => {
+    if (await bloquearAdocaoParaOng()) {
+      return;
+    }
+
     setStepsModalVisible(true);
     Animated.parallel([
       Animated.timing(stepsFadeAnim, {
@@ -226,7 +243,12 @@ export default function SwipeScreen() {
     });
   };
 
-  const handleContinueAdoption = () => {
+  const handleContinueAdoption = async () => {
+    if (await bloquearAdocaoParaOng()) {
+      closeStepsModal();
+      return;
+    }
+
     closeStepsModal();
     closeSheet();
     setTimeout(() => {

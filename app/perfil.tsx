@@ -855,6 +855,78 @@ const ProfileScreen = () => {
 
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={[
+            styles.fullEditCard,
+            {
+              backgroundColor: isDark
+                ? "#1E1E1E"
+                : "#FFFFFF"
+            }
+          ]}
+          onPress={() => router.push("/registerONG")}
+          activeOpacity={0.8}
+        >
+
+          <View style={styles.fullEditLeft}>
+
+            <View
+              style={[
+                styles.fullEditIconContainer,
+                {
+                  backgroundColor: "#0E457D"
+                }
+              ]}
+            >
+
+              <Icon
+                name="account-group-outline"
+                size={26}
+                color="#FFFFFF"
+              />
+
+            </View>
+
+            <View>
+
+              <Text
+                style={[
+                  styles.fullEditTitle,
+                  {
+                    color: isDark
+                      ? "#FFFFFF"
+                      : "#0E457D"
+                  }
+                ]}
+              >
+                Criar conta ONG
+              </Text>
+
+              <Text
+                style={[
+                  styles.fullEditSubtitle,
+                  {
+                    color: isDark
+                      ? "#BBBBBB"
+                      : "#666666"
+                  }
+                ]}
+              >
+                Cadastre sua instituicao
+              </Text>
+
+            </View>
+
+          </View>
+
+          <Icon
+            name="chevron-right"
+            size={28}
+            color="#999"
+          />
+
+        </TouchableOpacity>
+
         <View
           style={[
             styles.settingsCard,

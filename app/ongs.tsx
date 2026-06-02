@@ -19,7 +19,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import api from '../src/service/api';
-import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
+import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado, usuarioLogadoEhOng } from '../src/utils/pets';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 const { width, height } = Dimensions.get('window');
@@ -308,7 +308,24 @@ export default function OngsScreen() {
 
   const closePetModal = () => setSelectedPet(null);
 
-  const openStepsModal = () => {
+  async function bloquearAdocaoParaOng() {
+    if (!(await usuarioLogadoEhOng())) {
+      return false;
+    }
+
+    Alert.alert(
+      'Adocao indisponivel para ONGs',
+      'Contas de ONG nao podem iniciar processos de adocao pelo app. Para gerenciar a ONG, acesse pelo site.'
+    );
+
+    return true;
+  }
+
+  const openStepsModal = async () => {
+    if (await bloquearAdocaoParaOng()) {
+      return;
+    }
+
     setStepsModalVisible(true);
     Animated.timing(stepsY, {
       toValue: 0,
@@ -327,7 +344,12 @@ export default function OngsScreen() {
     });
   };
 
-  const handleContinueAdoption = () => {
+  const handleContinueAdoption = async () => {
+    if (await bloquearAdocaoParaOng()) {
+      closeStepsModal();
+      return;
+    }
+
     closeStepsModal();
     closePetModal();
     setTimeout(() => {
