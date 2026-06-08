@@ -28,6 +28,7 @@ export default function RootLayout() {
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack>
+          <Stack.Screen name="solicitacoesAdocao" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="criarconta" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
@@ -46,7 +47,6 @@ export default function RootLayout() {
           <Stack.Screen name="adocaoSucesso" options={{ headerShown: false }} />
           <Stack.Screen name="acompanharAdocao" options={{ headerShown: false }} />
           <Stack.Screen name="adocaoDetalhes" options={{ headerShown: false }} />
-          <Stack.Screen name="solicitacoesAdocao" options={{ headerShown: false }} />
           <Stack.Screen name="gerenciarSolicitacoes" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="quests" options={{ headerShown: false }} />
