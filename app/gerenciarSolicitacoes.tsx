@@ -10,7 +10,6 @@ import {
   TextInput,
   Modal,
   Linking,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
@@ -64,7 +63,22 @@ export default function DetalhesSolicitacaoONG() {
   });
 
   const [observacao, setObservacao] = useState('Família aparenta ser altamente compatível com o perfil ativo do pet.');
+  
+  // Controle de Modais de Ação
   const [modalStatusVisivel, setModalStatusVisivel] = useState(false);
+  const [modalEntrevistaVisivel, setModalEntrevistaVisivel] = useState(false);
+  const [modalInfoExtraVisivel, setModalInfoExtraVisivel] = useState(false);
+  
+  // Controle de Modais de Confirmação e Feedback
+  const [modalConfirmacaoVisivel, setModalConfirmacaoVisivel] = useState(false);
+  const [dadosConfirmacao, setDadosConfirmacao] = useState({ tipo: '', titulo: '', mensagem: '' });
+  
+  const [modalFeedbackVisivel, setModalFeedbackVisivel] = useState(false);
+  const [dadosFeedback, setDadosFeedback] = useState({ titulo: '', mensagem: '', erro: false });
+
+  // Estados dos formulários
+  const [dataEntrevista, setDataEntrevista] = useState('');
+  const [infoExtra, setInfoExtra] = useState('');
 
   const statusConfig: { [key: string]: { label: string; color: string; bg: string; icon: IconName } } = {
     'Em análise': { label: 'Solicitação em análise', color: '#F7B500', bg: '#FFF6D8', icon: 'time-outline' },
@@ -96,15 +110,44 @@ export default function DetalhesSolicitacaoONG() {
     }));
   };
 
-  const simularEnvioNotificacao = (novoStatus: string) => {
-    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. Status: ${novoStatus}.`);
+  const simularEnvioNotificacao = (titulo: string) => {
+    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. ${titulo}`);
+  };
+
+  const mostrarFeedback = (titulo: string, mensagem: string, erro: boolean = false) => {
+    setDadosFeedback({ titulo, mensagem, erro });
+    setModalFeedbackVisivel(true);
   };
 
   const atualizarStatusGeral = (novoStatus: string) => {
     setSolicitacao(prev => ({ ...prev, status: novoStatus }));
     setModalStatusVisivel(false);
-    simularEnvioNotificacao(novoStatus);
-    Alert.alert('Status Atualizado', `O processo agora está na etapa: ${novoStatus}. O adotante foi notificado.`);
+    setModalConfirmacaoVisivel(false);
+    simularEnvioNotificacao(`Status: ${novoStatus}`);
+    mostrarFeedback('Status Atualizado', `O processo agora está na etapa: ${novoStatus}. O adotante foi notificado.`);
+  };
+
+  const handleAgendarEntrevista = () => {
+    if (!dataEntrevista.trim()) {
+      mostrarFeedback('Atenção', 'Informe a data e horário sugerido para a entrevista.', true);
+      return;
+    }
+    setModalEntrevistaVisivel(false);
+    setSolicitacao(prev => ({ ...prev, status: 'Entrevista' }));
+    simularEnvioNotificacao('Nova Entrevista Agendada');
+    mostrarFeedback('Sucesso', `Entrevista marcada para: ${dataEntrevista}. O adotante foi notificado.`);
+    setDataEntrevista('');
+  };
+
+  const handlePedirInfoExtra = () => {
+    if (!infoExtra.trim()) {
+      mostrarFeedback('Atenção', 'Descreva quais informações extras são necessárias.', true);
+      return;
+    }
+    setModalInfoExtraVisivel(false);
+    simularEnvioNotificacao('Pedido de Informações Extras');
+    mostrarFeedback('Solicitação Enviada', 'Notificamos o adotante sobre as informações/documentos faltantes.');
+    setInfoExtra('');
   };
 
   const abrirWhatsAppAdotante = () => {
@@ -116,10 +159,10 @@ export default function DetalhesSolicitacaoONG() {
         if (supported) {
           return Linking.openURL(url);
         } else {
-          Alert.alert('Erro', 'O WhatsApp não está instalado neste dispositivo.');
+          mostrarFeedback('Erro', 'O WhatsApp não está instalado neste dispositivo.', true);
         }
       })
-      .catch(() => Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.'));
+      .catch(() => mostrarFeedback('Erro', 'Não foi possível abrir o WhatsApp.', true));
   };
 
   const renderBarraProgresso = (porcentagem: number) => {
@@ -244,14 +287,6 @@ export default function DetalhesSolicitacaoONG() {
               <Text style={[styles.answerText, { color: isDark ? '#E4E4E4' : '#444444' }]}>"{item.resposta}"</Text>
             </View>
           ))}
-
-          <TouchableOpacity 
-            style={[styles.secondaryButton, { borderColor: primaryColor }]} 
-            activeOpacity={0.8}
-            onPress={() => Alert.alert('Questionário Completo', 'Redirecionando para o formulário integral.')}
-          >
-            <Text style={[styles.secondaryButtonText, { color: primaryColor }]}>Ver questionário completo</Text>
-          </TouchableOpacity>
         </View>
 
         {/* CARD PERFIL EMOCIONAL */}
@@ -362,7 +397,7 @@ export default function DetalhesSolicitacaoONG() {
           <TouchableOpacity 
             style={[styles.saveButton, { backgroundColor: isDark ? '#333333' : '#F1F5F9' }]}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('Sucesso', 'Observações internas salvas.')}
+            onPress={() => mostrarFeedback('Sucesso', 'Observações internas salvas.')}
           >
             <Ionicons name="save-outline" size={16} color={isDark ? '#FFFFFF' : '#333333'} />
             <Text style={[styles.saveButtonText, { color: isDark ? '#FFFFFF' : '#333333' }]}>Salvar observação</Text>
@@ -376,7 +411,7 @@ export default function DetalhesSolicitacaoONG() {
           <View style={styles.actionGrid}>
             <TouchableOpacity 
               style={[styles.actionGridButton, { backgroundColor: '#8B5CF6' }]}
-              onPress={() => atualizarStatusGeral('Entrevista')}
+              onPress={() => setModalEntrevistaVisivel(true)}
             >
               <Ionicons name="calendar" size={18} color="#FFFFFF" />
               <Text style={styles.actionGridButtonText}>Agendar Entrevista</Text>
@@ -384,7 +419,7 @@ export default function DetalhesSolicitacaoONG() {
 
             <TouchableOpacity 
               style={[styles.actionGridButton, { backgroundColor: '#3B82F6' }]}
-              onPress={() => Alert.alert('Informações', 'Documentos solicitados.')}
+              onPress={() => setModalInfoExtraVisivel(true)}
             >
               <Ionicons name="information-circle" size={18} color="#FFFFFF" />
               <Text style={styles.actionGridButtonText}>Pedir Info Extra</Text>
@@ -405,10 +440,12 @@ export default function DetalhesSolicitacaoONG() {
               style={[styles.decisionButton, { backgroundColor: '#22C55E' }]}
               activeOpacity={0.9}
               onPress={() => {
-                Alert.alert('Confirmar Aprovação', 'Deseja aprovar definitivamente esta solicitação?', [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Sim, Aprovar', onPress: () => atualizarStatusGeral('Aprovado') }
-                ]);
+                setDadosConfirmacao({ 
+                  tipo: 'Aprovado', 
+                  titulo: 'Confirmar Aprovação', 
+                  mensagem: 'Deseja aprovar definitivamente esta solicitação de adoção?' 
+                });
+                setModalConfirmacaoVisivel(true);
               }}
             >
               <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
@@ -419,10 +456,12 @@ export default function DetalhesSolicitacaoONG() {
               style={[styles.decisionButton, { backgroundColor: '#EF4444' }]}
               activeOpacity={0.9}
               onPress={() => {
-                Alert.alert('Confirmar Reprovação', 'Tem certeza que deseja reprovar esta solicitação?', [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Sim, Reprovar', onPress: () => atualizarStatusGeral('Reprovado') }
-                ]);
+                setDadosConfirmacao({ 
+                  tipo: 'Reprovado', 
+                  titulo: 'Confirmar Reprovação', 
+                  mensagem: 'Tem certeza que deseja reprovar esta solicitação? Esta ação notificará o adotante.' 
+                });
+                setModalConfirmacaoVisivel(true);
               }}
             >
               <Ionicons name="close-circle" size={18} color="#FFFFFF" />
@@ -433,7 +472,7 @@ export default function DetalhesSolicitacaoONG() {
 
       </ScrollView>
 
-      {/* MODAL ATUALIZAR STATUS */}
+      {/* MODAL: ATUALIZAR STATUS (LISTA) */}
       <Modal visible={modalStatusVisivel} transparent animationType="fade" onRequestClose={() => setModalStatusVisivel(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
@@ -473,6 +512,139 @@ export default function DetalhesSolicitacaoONG() {
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: AGENDAR ENTREVISTA */}
+      <Modal visible={modalEntrevistaVisivel} transparent animationType="fade" onRequestClose={() => setModalEntrevistaVisivel(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Agendar Entrevista</Text>
+                <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666' }]}>Informe a data e horário</Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalEntrevistaVisivel(false)} style={[styles.closeModalButton, { backgroundColor: isDark ? '#2A2A2A' : '#F4F4F4' }]}>
+                <Ionicons name="close" size={20} color={isDark ? '#FFFFFF' : '#333333'} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[styles.inputModal, { 
+                backgroundColor: isDark ? '#242424' : '#F8F9FB', 
+                color: isDark ? '#FFFFFF' : '#333333',
+                borderColor: isDark ? '#3A3A3A' : '#E2E8F0'
+              }]}
+              value={dataEntrevista}
+              onChangeText={setDataEntrevista}
+              placeholder="Ex: 15/06 às 14:00 (Presencial ou Online)"
+              placeholderTextColor="#888888"
+            />
+
+            <TouchableOpacity 
+              style={[styles.modalSubmitButton, { backgroundColor: '#8B5CF6' }]}
+              onPress={handleAgendarEntrevista}
+            >
+              <Text style={styles.modalSubmitButtonText}>Confirmar Agendamento</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: PEDIR INFO EXTRA */}
+      <Modal visible={modalInfoExtraVisivel} transparent animationType="fade" onRequestClose={() => setModalInfoExtraVisivel(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Pedir Informação Extra</Text>
+                <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666' }]}>Descreva o que está faltando</Text>
+              </View>
+              <TouchableOpacity onPress={() => setModalInfoExtraVisivel(false)} style={[styles.closeModalButton, { backgroundColor: isDark ? '#2A2A2A' : '#F4F4F4' }]}>
+                <Ionicons name="close" size={20} color={isDark ? '#FFFFFF' : '#333333'} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={[styles.textAreaModal, { 
+                backgroundColor: isDark ? '#242424' : '#F8F9FB', 
+                color: isDark ? '#FFFFFF' : '#333333',
+                borderColor: isDark ? '#3A3A3A' : '#E2E8F0'
+              }]}
+              multiline
+              numberOfLines={4}
+              value={infoExtra}
+              onChangeText={setInfoExtra}
+              placeholder="Ex: Por favor, envie um vídeo mostrando os muros e portões da casa..."
+              placeholderTextColor="#888888"
+            />
+
+            <TouchableOpacity 
+              style={[styles.modalSubmitButton, { backgroundColor: '#3B82F6' }]}
+              onPress={handlePedirInfoExtra}
+            >
+              <Text style={styles.modalSubmitButtonText}>Enviar Solicitação ao Adotante</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: CONFIRMAÇÃO DE APROVAR/REPROVAR */}
+      <Modal visible={modalConfirmacaoVisivel} transparent animationType="fade" onRequestClose={() => setModalConfirmacaoVisivel(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', paddingBottom: 32 }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111', marginBottom: 12, fontSize: 22 }]}>
+              {dadosConfirmacao.titulo}
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666', marginBottom: 28, fontSize: 15, lineHeight: 22 }]}>
+              {dadosConfirmacao.mensagem}
+            </Text>
+            
+            <View style={styles.modalActionRow}>
+              <TouchableOpacity 
+                style={[styles.modalActionButton, { backgroundColor: isDark ? '#333333' : '#E2E8F0' }]}
+                onPress={() => setModalConfirmacaoVisivel(false)}
+              >
+                <Text style={{ color: isDark ? '#FFFFFF' : '#333333', fontWeight: 'bold', fontSize: 15 }}>Cancelar</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalActionButton, { backgroundColor: dadosConfirmacao.tipo === 'Aprovado' ? '#22C55E' : '#EF4444' }]}
+                onPress={() => atualizarStatusGeral(dadosConfirmacao.tipo)}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 }}>
+                  Sim, {dadosConfirmacao.tipo === 'Aprovado' ? 'Aprovar' : 'Reprovar'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL: FEEDBACK DE SUCESSO/ERRO GENÉRICO */}
+      <Modal visible={modalFeedbackVisivel} transparent animationType="fade" onRequestClose={() => setModalFeedbackVisivel(false)}>
+        <View style={styles.modalOverlayCenter}>
+          <View style={[styles.modalFeedbackCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
+            <Ionicons 
+              name={dadosFeedback.erro ? "alert-circle" : "checkmark-circle"} 
+              size={64} 
+              color={dadosFeedback.erro ? "#EF4444" : primaryColor} 
+              style={{ marginBottom: 16 }} 
+            />
+            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111', marginBottom: 8, textAlign: 'center' }]}>
+              {dadosFeedback.titulo}
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666', textAlign: 'center', marginBottom: 24, fontSize: 15, lineHeight: 22 }]}>
+              {dadosFeedback.mensagem}
+            </Text>
+            
+            <TouchableOpacity 
+              style={[styles.modalSubmitButton, { backgroundColor: dadosFeedback.erro ? "#EF4444" : primaryColor, width: '100%' }]}
+              onPress={() => setModalFeedbackVisivel(false)}
+            >
+              <Text style={styles.modalSubmitButtonText}>Entendi</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -651,18 +823,6 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontStyle: 'italic',
   },
-  secondaryButton: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  secondaryButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
   metricContainer: {
     marginBottom: 14,
     gap: 6,
@@ -801,12 +961,29 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalOverlayCenter: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
   modalContentCard: {
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     padding: 24,
     paddingBottom: 40,
     maxHeight: '80%',
+  },
+  modalFeedbackCard: {
+    width: '100%',
+    borderRadius: 32,
+    padding: 32,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -848,5 +1025,42 @@ const styles = StyleSheet.create({
   },
   modalOptionLabel: {
     fontSize: 15,
+  },
+  inputModal: {
+    borderRadius: 16,
+    padding: 16,
+    fontSize: 15,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  textAreaModal: {
+    borderRadius: 16,
+    padding: 16,
+    height: 100,
+    textAlignVertical: 'top',
+    fontSize: 15,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  modalSubmitButton: {
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  modalSubmitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  modalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalActionButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
