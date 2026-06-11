@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,84 +10,169 @@ import {
   TextInput,
   Modal,
   Linking,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRouter } from 'expo-router';
+import {
+  useLocalSearchParams,
+  useRouter
+} from 'expo-router';
 import { ComponentProps } from 'react';
+import api from '../src/service/api';
+import { formatarDataAdocao, formatarResposta } from '../src/utils/adocao';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 export default function DetalhesSolicitacaoONG() {
   const router = useRouter();
+
+  const { id } = useLocalSearchParams();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
   const primaryColor = isDark ? '#FF80AB' : '#FF2BAA';
   const shadowColor = '#000000';
 
-  const [solicitacao, setSolicitacao] = useState({
-    pet: {
-      nome: 'Thor',
-      emoji: '🐶',
-      imagem: require('@/assets/images/cachorro02.jpg'),
-    },
-    adotante: {
-      nome: 'Lucas Silva',
-      idade: 28,
-      cidade: 'Matão',
-      estado: 'SP',
-      telefone: '5516999999999',
-      email: 'lucas.silva@email.com',
-      foto: require('@/assets/images/cachorro01.jpg'),
-    },
-    resumo: {
-      dataSolicitacao: '28 Maio 2026',
-      tipoMoradia: 'Casa',
-      possuiQuintal: 'Sim, amplo e fechado',
-      experienciaAnimais: 'Já teve um cão por 12 anos',
-    },
-    questionario: [
-      { id: '1', pergunta: 'Por que deseja adotar?', resposta: 'Busco um companheiro para caminhadas e para fazer parte da nossa família.' },
-      { id: '2', pergunta: 'Quanto tempo ficará sozinho?', resposta: 'No máximo 4 horas por dia, trabalho em modelo híbrido.' },
-      { id: '3', pergunta: 'Quem cuidará do pet?', resposta: 'Eu e minha esposa dividiremos os cuidados diários.' },
-      { id: '4', pergunta: 'Possui outros animais?', resposta: 'Não no momento, mas a casa está totalmente preparada.' },
-    ],
-    perfilEmocional: {
-      responsabilidade: 80,
-      comprometimento: 90,
-      disponibilidade: 75,
-      perfilFamiliar: 85,
-    },
-    status: 'Em análise',
-  });
+  const [solicitacao, setSolicitacao] = useState<any>(null);
 
-  const [observacao, setObservacao] = useState('Família aparenta ser altamente compatível com o perfil ativo do pet.');
-  
-  // Controle de Modais de Ação
+  const [observacao, setObservacao] = useState('');
   const [modalStatusVisivel, setModalStatusVisivel] = useState(false);
-  const [modalEntrevistaVisivel, setModalEntrevistaVisivel] = useState(false);
-  const [modalInfoExtraVisivel, setModalInfoExtraVisivel] = useState(false);
-  
-  // Controle de Modais de Confirmação e Feedback
-  const [modalConfirmacaoVisivel, setModalConfirmacaoVisivel] = useState(false);
-  const [dadosConfirmacao, setDadosConfirmacao] = useState({ tipo: '', titulo: '', mensagem: '' });
-  
-  const [modalFeedbackVisivel, setModalFeedbackVisivel] = useState(false);
-  const [dadosFeedback, setDadosFeedback] = useState({ titulo: '', mensagem: '', erro: false });
 
-  // Estados dos formulários
-  const [dataEntrevista, setDataEntrevista] = useState('');
-  const [infoExtra, setInfoExtra] = useState('');
+  useEffect(() => {
+    carregarSolicitacao();
+  }, []);
+
+  function valorResposta(valor?: string | number | null) {
+    if (valor === undefined || valor === null || valor === '') {
+      return 'Nao informado';
+    }
+
+    return formatarResposta(String(valor));
+  }
+
+  function montarQuestionario(data: any) {
+    const respostas = [
+      { pergunta: 'Por que deseja adotar?', resposta: valorResposta(data.etapa2_motivacao) },
+      { pergunta: 'Experiencia com pets', resposta: valorResposta(data.etapa2_experiencia) },
+      { pergunta: 'Apoio da familia', resposta: valorResposta(data.etapa2_apoio_familia) },
+      { pergunta: 'Rotina do pet', resposta: valorResposta(data.etapa2_rotina) },
+      { pergunta: 'Condicao financeira', resposta: valorResposta(data.etapa2_financeiro) },
+      { pergunta: 'Ambiente para o pet', resposta: valorResposta(data.etapa2_ambiente) },
+      { pergunta: 'Tipo de moradia', resposta: valorResposta(data.etapa1_moradia) },
+      { pergunta: 'Possui outros animais?', resposta: valorResposta(data.etapa1_possui_animais) },
+      { pergunta: 'Possui criancas?', resposta: valorResposta(data.etapa1_possui_criancas) },
+    ];
+
+    return respostas.map((item, index) => ({ id: String(index + 1), ...item }));
+  }
+
+  function montarSolicitacao(data: any) {
+    const questionario = montarQuestionario(data);
+    const respostasInformadas = questionario.filter((item) => item.resposta !== 'Nao informado').length;
+    const porcentagemBase = Math.round((respostasInformadas / questionario.length) * 100);
+
+    return {
+      id: data.idsolicitacao || data.id,
+      fk_idpet: data.fk_idpet,
+      fk_idusuario: data.fk_idusuario,
+      pet: {
+        nome: data.pet || 'Pet',
+        emoji: '',
+        imagem: data.pet_foto ? { uri: data.pet_foto } : require('@/assets/images/cachorro01.jpg'),
+      },
+      adotante: {
+        nome: data.etapa1_nome || data.usuario || 'Interessado nao informado',
+        telefone: data.etapa1_telefone || data.usuario_telefone || '',
+        email: data.usuario_email || '',
+        idade: Number(data.etapa1_idade) || '',
+        cidade: data.etapa1_cidade || 'Nao informada',
+        estado: data.estado || data.sigla || '',
+        foto: require('@/assets/images/perfil.png'),
+      },
+      resumo: {
+        dataSolicitacao: formatarDataAdocao(data.data_solicitacao || data.data_criacao || data.created_at),
+        tipoMoradia: valorResposta(data.etapa1_moradia),
+        possuiQuintal: valorResposta(data.etapa2_ambiente),
+        experienciaAnimais: valorResposta(data.etapa2_experiencia),
+      },
+      questionario,
+      perfilEmocional: {
+        responsabilidade: porcentagemBase,
+        comprometimento: porcentagemBase,
+        disponibilidade: porcentagemBase,
+        perfilFamiliar: porcentagemBase,
+      },
+      status: data.status || 'Solicitacao enviada',
+    };
+  }
+
+  if (!solicitacao) {
+    return (
+      <SafeAreaView
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Text>Carregando...</Text>
+      </SafeAreaView>
+    );
+  }
+
+  async function carregarSolicitacao() {
+    try {
+      const response = await api.get(`/solicitacoesadocao/${id}`);
+      const data = Array.isArray(response.data) ? response.data[0] : response.data;
+
+      if (!data) {
+        throw new Error('Solicitacao nao encontrada.');
+      }
+
+      setSolicitacao(montarSolicitacao(data));
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel carregar a solicitacao.');
+    }
+  }
 
   const statusConfig: { [key: string]: { label: string; color: string; bg: string; icon: IconName } } = {
+    'Solicitacao enviada': { label: 'Solicitacao enviada', color: '#3B82F6', bg: '#DBEAFE', icon: 'paper-plane-outline' },
+    'Nova': { label: 'Nova solicitacao', color: '#3B82F6', bg: '#DBEAFE', icon: 'sparkles-outline' },
+    'Em analise': { label: 'Solicitacao em analise', color: '#F7B500', bg: '#FFF6D8', icon: 'time-outline' },
+    'Entrevista agendada': { label: 'Entrevista agendada', color: '#8B5CF6', bg: '#EFE7FF', icon: 'calendar-outline' },
+    'Nao aprovado': { label: 'Nao aprovado', color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
     'Em análise': { label: 'Solicitação em análise', color: '#F7B500', bg: '#FFF6D8', icon: 'time-outline' },
     'Entrevista': { label: 'Entrevista agendada', color: '#8B5CF6', bg: '#EFE7FF', icon: 'calendar-outline' },
     'Visita': { label: 'Visita agendada', color: '#3B82F6', bg: '#EFF6FF', icon: 'home-outline' },
     'Aprovado': { label: 'Aprovado', color: '#22C55E', bg: '#DCFCE7', icon: 'checkmark-circle-outline' },
-    'Entregue': { label: 'Pet entregue! ❤️', color: '#EC4899', bg: '#FCE7F3', icon: 'heart-done-outline' },
+    'Entregue': { label: 'Pet entregue!', color: '#EC4899', bg: '#FCE7F3', icon: 'heart-outline' },
     'Reprovado': { label: 'Reprovado', color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
   };
+
+  const fallbackStatus = statusConfig['Solicitacao enviada'];
+
+  function normalizarStatusKey(status: string) {
+    const texto = status
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+
+    if (texto.includes('entrevista')) return 'Entrevista agendada';
+    if (texto.includes('visita')) return 'Visita';
+    if (texto.includes('entregue') || texto.includes('finaliz')) return 'Entregue';
+    if (texto.includes('aprovad') && !texto.includes('nao')) return 'Aprovado';
+    if (texto.includes('reprov') || texto.includes('nao aprovado')) return 'Reprovado';
+    if (texto.includes('analise')) return 'Em analise';
+    if (texto.includes('nova')) return 'Nova';
+    if (texto.includes('solicitacao')) return 'Solicitacao enviada';
+
+    return status;
+  }
+
+  function obterStatusConfig(status: string) {
+    return statusConfig[normalizarStatusKey(status)] || fallbackStatus;
+  }
 
   const todasEtapas: { key: string; label: string; icon: IconName }[] = [
     { key: 'Solicitação enviada', label: 'Solicitação enviada', icon: 'paper-plane-outline' },
@@ -110,59 +195,40 @@ export default function DetalhesSolicitacaoONG() {
     }));
   };
 
-  const simularEnvioNotificacao = (titulo: string) => {
-    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. ${titulo}`);
+  const simularEnvioNotificacao = (novoStatus: string) => {
+    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. Status: ${novoStatus}.`);
   };
 
-  const mostrarFeedback = (titulo: string, mensagem: string, erro: boolean = false) => {
-    setDadosFeedback({ titulo, mensagem, erro });
-    setModalFeedbackVisivel(true);
-  };
+  const atualizarStatusGeral = async (novoStatus: string) => {
+    try {
+      await api.put(`/solicitacoesadocao/${solicitacao.id}`, {
+        fk_idpet: solicitacao.fk_idpet,
+        fk_idusuario: solicitacao.fk_idusuario,
+        status: novoStatus,
+      });
 
-  const atualizarStatusGeral = (novoStatus: string) => {
-    setSolicitacao(prev => ({ ...prev, status: novoStatus }));
-    setModalStatusVisivel(false);
-    setModalConfirmacaoVisivel(false);
-    simularEnvioNotificacao(`Status: ${novoStatus}`);
-    mostrarFeedback('Status Atualizado', `O processo agora está na etapa: ${novoStatus}. O adotante foi notificado.`);
-  };
-
-  const handleAgendarEntrevista = () => {
-    if (!dataEntrevista.trim()) {
-      mostrarFeedback('Atenção', 'Informe a data e horário sugerido para a entrevista.', true);
-      return;
+      setSolicitacao((prev: any) => ({ ...prev, status: novoStatus }));
+      setModalStatusVisivel(false);
+      simularEnvioNotificacao(novoStatus);
+      Alert.alert('Status Atualizado', `O processo agora esta na etapa: ${novoStatus}. O adotante foi notificado.`);
+    } catch {
+      Alert.alert('Erro', 'Nao foi possivel atualizar o status no banco.');
     }
-    setModalEntrevistaVisivel(false);
-    setSolicitacao(prev => ({ ...prev, status: 'Entrevista' }));
-    simularEnvioNotificacao('Nova Entrevista Agendada');
-    mostrarFeedback('Sucesso', `Entrevista marcada para: ${dataEntrevista}. O adotante foi notificado.`);
-    setDataEntrevista('');
-  };
-
-  const handlePedirInfoExtra = () => {
-    if (!infoExtra.trim()) {
-      mostrarFeedback('Atenção', 'Descreva quais informações extras são necessárias.', true);
-      return;
-    }
-    setModalInfoExtraVisivel(false);
-    simularEnvioNotificacao('Pedido de Informações Extras');
-    mostrarFeedback('Solicitação Enviada', 'Notificamos o adotante sobre as informações/documentos faltantes.');
-    setInfoExtra('');
   };
 
   const abrirWhatsAppAdotante = () => {
     const mensagem = `Olá ${solicitacao.adotante.nome}, aqui é da ONG do app Patas Conscientes. Estamos analisando sua solicitação de adoção para o ${solicitacao.pet.nome}!`;
     const url = `whatsapp://send?phone=${solicitacao.adotante.telefone}&text=${encodeURIComponent(mensagem)}`;
-    
+
     Linking.canOpenURL(url)
       .then(supported => {
         if (supported) {
           return Linking.openURL(url);
         } else {
-          mostrarFeedback('Erro', 'O WhatsApp não está instalado neste dispositivo.', true);
+          Alert.alert('Erro', 'O WhatsApp não está instalado neste dispositivo.');
         }
       })
-      .catch(() => mostrarFeedback('Erro', 'Não foi possível abrir o WhatsApp.', true));
+      .catch(() => Alert.alert('Erro', 'Não foi possível abrir o WhatsApp.'));
   };
 
   const renderBarraProgresso = (porcentagem: number) => {
@@ -171,9 +237,11 @@ export default function DetalhesSolicitacaoONG() {
     return '█'.repeat(blocosAtivos) + '░'.repeat(totalBlocos - blocosAtivos) + ` ${porcentagem}%`;
   };
 
+  const statusAtual = obterStatusConfig(solicitacao.status);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: isDark ? '#121212' : '#F8F9FB' }]}>
-      
+
       {/* HEADER FIXO SUPERIOR */}
       <View style={styles.fixedHeader}>
         <TouchableOpacity
@@ -191,7 +259,7 @@ export default function DetalhesSolicitacaoONG() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        
+
         {/* HEADER DA TELA */}
         <View style={[styles.profileHeaderCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', borderColor: isDark ? '#2A2A2A' : '#EFEFEF' }]}>
           <Image source={solicitacao.pet.imagem} style={styles.petAvatar} resizeMode="cover" />
@@ -199,11 +267,11 @@ export default function DetalhesSolicitacaoONG() {
             <Text style={[styles.petNameText, { color: isDark ? '#FFFFFF' : '#111111' }]}>
               {solicitacao.pet.nome} {solicitacao.pet.emoji}
             </Text>
-            
-            <View style={[styles.statusBadge, { backgroundColor: isDark ? `${statusConfig[solicitacao.status].color}20` : statusConfig[solicitacao.status].bg }]}>
-              <Ionicons name={statusConfig[solicitacao.status].icon} size={14} color={statusConfig[solicitacao.status].color} />
-              <Text style={[styles.statusText, { color: statusConfig[solicitacao.status].color }]}>
-                {statusConfig[solicitacao.status].label}
+
+            <View style={[styles.statusBadge, { backgroundColor: isDark ? `${statusAtual.color}20` : statusAtual.bg }]}>
+              <Ionicons name={statusAtual.icon} size={14} color={statusAtual.color} />
+              <Text style={[styles.statusText, { color: statusAtual.color }]}>
+                {statusAtual.label}
               </Text>
             </View>
 
@@ -219,7 +287,7 @@ export default function DetalhesSolicitacaoONG() {
             <Ionicons name="document-text-outline" size={20} color={primaryColor} />
             <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Resumo da Solicitação</Text>
           </View>
-          
+
           <View style={styles.quickInfoGrid}>
             <View style={[styles.quickInfoBox, { backgroundColor: isDark ? '#242424' : '#F8F9FB' }]}>
               <Text style={styles.infoLabel}>Data do Envio</Text>
@@ -281,12 +349,22 @@ export default function DetalhesSolicitacaoONG() {
             <Text style={[styles.cardTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Questionário de Adoção</Text>
           </View>
 
-          {solicitacao.questionario.map(item => (
+          {solicitacao.questionario.map((item: any) => (
             <View key={item.id} style={[styles.questionInnerCard, { backgroundColor: isDark ? '#242424' : '#F4F5F7' }]}>
               <Text style={[styles.questionText, { color: primaryColor }]}>{item.pergunta}</Text>
               <Text style={[styles.answerText, { color: isDark ? '#E4E4E4' : '#444444' }]}>"{item.resposta}"</Text>
             </View>
           ))}
+
+          {false && (
+          <TouchableOpacity
+            style={[styles.secondaryButton, { borderColor: primaryColor }]}
+            activeOpacity={0.8}
+            onPress={() => Alert.alert('Questionário Completo', 'Redirecionando para o formulário integral.')}
+          >
+            <Text style={[styles.secondaryButtonText, { color: primaryColor }]} />
+          </TouchableOpacity>
+          )}
         </View>
 
         {/* CARD PERFIL EMOCIONAL */}
@@ -337,30 +415,30 @@ export default function DetalhesSolicitacaoONG() {
               <View key={passo.key} style={styles.timelineItem}>
                 <View style={styles.timelineLeftColumn}>
                   <View style={[
-                    styles.timelineNode, 
-                    { 
-                      backgroundColor: passo.ativo 
-                        ? primaryColor 
+                    styles.timelineNode,
+                    {
+                      backgroundColor: passo.ativo
+                        ? primaryColor
                         : (passo.completo ? `${primaryColor}B0` : (isDark ? '#2A2A2A' : '#ECECEC'))
                     }
                   ]}>
-                    <Ionicons 
-                      name={passo.completo ? 'checkmark' : passo.icon} 
-                      size={14} 
-                      color={passo.completo || passo.ativo ? '#FFFFFF' : '#888888'} 
+                    <Ionicons
+                      name={passo.completo ? 'checkmark' : passo.icon}
+                      size={14}
+                      color={passo.completo || passo.ativo ? '#FFFFFF' : '#888888'}
                     />
                   </View>
                   {index !== todasEtapas.length - 1 && (
                     <View style={[
-                      styles.timelineLine, 
+                      styles.timelineLine,
                       { backgroundColor: passo.completo ? `${primaryColor}60` : (isDark ? '#2A2A2A' : '#ECECEC') }
                     ]} />
                   )}
                 </View>
                 <View style={styles.timelineContent}>
                   <Text style={[
-                    styles.timelineTitleText, 
-                    { 
+                    styles.timelineTitleText,
+                    {
                       color: passo.ativo ? primaryColor : (isDark ? '#FFFFFF' : '#111111'),
                       fontWeight: passo.ativo ? '800' : '500'
                     }
@@ -381,8 +459,8 @@ export default function DetalhesSolicitacaoONG() {
           </View>
 
           <TextInput
-            style={[styles.textArea, { 
-              backgroundColor: isDark ? '#242424' : '#F8F9FB', 
+            style={[styles.textArea, {
+              backgroundColor: isDark ? '#242424' : '#F8F9FB',
               color: isDark ? '#FFFFFF' : '#333333',
               borderColor: isDark ? '#3A3A3A' : '#E2E8F0'
             }]}
@@ -394,10 +472,10 @@ export default function DetalhesSolicitacaoONG() {
             placeholderTextColor="#888888"
           />
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.saveButton, { backgroundColor: isDark ? '#333333' : '#F1F5F9' }]}
             activeOpacity={0.8}
-            onPress={() => mostrarFeedback('Sucesso', 'Observações internas salvas.')}
+            onPress={() => Alert.alert('Sucesso', 'Observações internas salvas.')}
           >
             <Ionicons name="save-outline" size={16} color={isDark ? '#FFFFFF' : '#333333'} />
             <Text style={[styles.saveButtonText, { color: isDark ? '#FFFFFF' : '#333333' }]}>Salvar observação</Text>
@@ -407,26 +485,26 @@ export default function DetalhesSolicitacaoONG() {
         {/* AÇÕES DE GERENCIAMENTO DA ONG */}
         <View style={styles.actionsContainer}>
           <Text style={[styles.sectionTitleLabel, { color: isDark ? '#BDBDBD' : '#666666' }]}>Ações de Gestão do Processo</Text>
-          
+
           <View style={styles.actionGrid}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionGridButton, { backgroundColor: '#8B5CF6' }]}
-              onPress={() => setModalEntrevistaVisivel(true)}
+              onPress={() => atualizarStatusGeral('Entrevista')}
             >
               <Ionicons name="calendar" size={18} color="#FFFFFF" />
               <Text style={styles.actionGridButtonText}>Agendar Entrevista</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionGridButton, { backgroundColor: '#3B82F6' }]}
-              onPress={() => setModalInfoExtraVisivel(true)}
+              onPress={() => Alert.alert('Informações', 'Documentos solicitados.')}
             >
               <Ionicons name="information-circle" size={18} color="#FFFFFF" />
               <Text style={styles.actionGridButtonText}>Pedir Info Extra</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.primaryActionFullButton, { backgroundColor: primaryColor, shadowColor }]}
             activeOpacity={0.9}
             onPress={() => setModalStatusVisivel(true)}
@@ -436,32 +514,28 @@ export default function DetalhesSolicitacaoONG() {
           </TouchableOpacity>
 
           <View style={styles.decisionRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.decisionButton, { backgroundColor: '#22C55E' }]}
               activeOpacity={0.9}
               onPress={() => {
-                setDadosConfirmacao({ 
-                  tipo: 'Aprovado', 
-                  titulo: 'Confirmar Aprovação', 
-                  mensagem: 'Deseja aprovar definitivamente esta solicitação de adoção?' 
-                });
-                setModalConfirmacaoVisivel(true);
+                Alert.alert('Confirmar Aprovação', 'Deseja aprovar definitivamente esta solicitação?', [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Sim, Aprovar', onPress: () => atualizarStatusGeral('Aprovado') }
+                ]);
               }}
             >
               <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
               <Text style={styles.decisionButtonText}>Aprovar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.decisionButton, { backgroundColor: '#EF4444' }]}
               activeOpacity={0.9}
               onPress={() => {
-                setDadosConfirmacao({ 
-                  tipo: 'Reprovado', 
-                  titulo: 'Confirmar Reprovação', 
-                  mensagem: 'Tem certeza que deseja reprovar esta solicitação? Esta ação notificará o adotante.' 
-                });
-                setModalConfirmacaoVisivel(true);
+                Alert.alert('Confirmar Reprovação', 'Tem certeza que deseja reprovar esta solicitação?', [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Sim, Reprovar', onPress: () => atualizarStatusGeral('Reprovado') }
+                ]);
               }}
             >
               <Ionicons name="close-circle" size={18} color="#FFFFFF" />
@@ -472,7 +546,7 @@ export default function DetalhesSolicitacaoONG() {
 
       </ScrollView>
 
-      {/* MODAL: ATUALIZAR STATUS (LISTA) */}
+      {/* MODAL ATUALIZAR STATUS */}
       <Modal visible={modalStatusVisivel} transparent animationType="fade" onRequestClose={() => setModalStatusVisivel(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
@@ -492,7 +566,7 @@ export default function DetalhesSolicitacaoONG() {
                   key={key}
                   style={[
                     styles.modalOptionRow,
-                    { 
+                    {
                       backgroundColor: isDark ? '#242424' : '#F8F9FB',
                       borderColor: solicitacao.status === key ? primaryColor : 'transparent',
                       borderWidth: 1
@@ -512,139 +586,6 @@ export default function DetalhesSolicitacaoONG() {
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL: AGENDAR ENTREVISTA */}
-      <Modal visible={modalEntrevistaVisivel} transparent animationType="fade" onRequestClose={() => setModalEntrevistaVisivel(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Agendar Entrevista</Text>
-                <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666' }]}>Informe a data e horário</Text>
-              </View>
-              <TouchableOpacity onPress={() => setModalEntrevistaVisivel(false)} style={[styles.closeModalButton, { backgroundColor: isDark ? '#2A2A2A' : '#F4F4F4' }]}>
-                <Ionicons name="close" size={20} color={isDark ? '#FFFFFF' : '#333333'} />
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={[styles.inputModal, { 
-                backgroundColor: isDark ? '#242424' : '#F8F9FB', 
-                color: isDark ? '#FFFFFF' : '#333333',
-                borderColor: isDark ? '#3A3A3A' : '#E2E8F0'
-              }]}
-              value={dataEntrevista}
-              onChangeText={setDataEntrevista}
-              placeholder="Ex: 15/06 às 14:00 (Presencial ou Online)"
-              placeholderTextColor="#888888"
-            />
-
-            <TouchableOpacity 
-              style={[styles.modalSubmitButton, { backgroundColor: '#8B5CF6' }]}
-              onPress={handleAgendarEntrevista}
-            >
-              <Text style={styles.modalSubmitButtonText}>Confirmar Agendamento</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL: PEDIR INFO EXTRA */}
-      <Modal visible={modalInfoExtraVisivel} transparent animationType="fade" onRequestClose={() => setModalInfoExtraVisivel(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111' }]}>Pedir Informação Extra</Text>
-                <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666' }]}>Descreva o que está faltando</Text>
-              </View>
-              <TouchableOpacity onPress={() => setModalInfoExtraVisivel(false)} style={[styles.closeModalButton, { backgroundColor: isDark ? '#2A2A2A' : '#F4F4F4' }]}>
-                <Ionicons name="close" size={20} color={isDark ? '#FFFFFF' : '#333333'} />
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={[styles.textAreaModal, { 
-                backgroundColor: isDark ? '#242424' : '#F8F9FB', 
-                color: isDark ? '#FFFFFF' : '#333333',
-                borderColor: isDark ? '#3A3A3A' : '#E2E8F0'
-              }]}
-              multiline
-              numberOfLines={4}
-              value={infoExtra}
-              onChangeText={setInfoExtra}
-              placeholder="Ex: Por favor, envie um vídeo mostrando os muros e portões da casa..."
-              placeholderTextColor="#888888"
-            />
-
-            <TouchableOpacity 
-              style={[styles.modalSubmitButton, { backgroundColor: '#3B82F6' }]}
-              onPress={handlePedirInfoExtra}
-            >
-              <Text style={styles.modalSubmitButtonText}>Enviar Solicitação ao Adotante</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL: CONFIRMAÇÃO DE APROVAR/REPROVAR */}
-      <Modal visible={modalConfirmacaoVisivel} transparent animationType="fade" onRequestClose={() => setModalConfirmacaoVisivel(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContentCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF', paddingBottom: 32 }]}>
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111', marginBottom: 12, fontSize: 22 }]}>
-              {dadosConfirmacao.titulo}
-            </Text>
-            <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666', marginBottom: 28, fontSize: 15, lineHeight: 22 }]}>
-              {dadosConfirmacao.mensagem}
-            </Text>
-            
-            <View style={styles.modalActionRow}>
-              <TouchableOpacity 
-                style={[styles.modalActionButton, { backgroundColor: isDark ? '#333333' : '#E2E8F0' }]}
-                onPress={() => setModalConfirmacaoVisivel(false)}
-              >
-                <Text style={{ color: isDark ? '#FFFFFF' : '#333333', fontWeight: 'bold', fontSize: 15 }}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.modalActionButton, { backgroundColor: dadosConfirmacao.tipo === 'Aprovado' ? '#22C55E' : '#EF4444' }]}
-                onPress={() => atualizarStatusGeral(dadosConfirmacao.tipo)}
-              >
-                <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 15 }}>
-                  Sim, {dadosConfirmacao.tipo === 'Aprovado' ? 'Aprovar' : 'Reprovar'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* MODAL: FEEDBACK DE SUCESSO/ERRO GENÉRICO */}
-      <Modal visible={modalFeedbackVisivel} transparent animationType="fade" onRequestClose={() => setModalFeedbackVisivel(false)}>
-        <View style={styles.modalOverlayCenter}>
-          <View style={[styles.modalFeedbackCard, { backgroundColor: isDark ? '#1B1B1B' : '#FFFFFF' }]}>
-            <Ionicons 
-              name={dadosFeedback.erro ? "alert-circle" : "checkmark-circle"} 
-              size={64} 
-              color={dadosFeedback.erro ? "#EF4444" : primaryColor} 
-              style={{ marginBottom: 16 }} 
-            />
-            <Text style={[styles.modalTitle, { color: isDark ? '#FFFFFF' : '#111111', marginBottom: 8, textAlign: 'center' }]}>
-              {dadosFeedback.titulo}
-            </Text>
-            <Text style={[styles.modalSubtitle, { color: isDark ? '#BDBDBD' : '#666666', textAlign: 'center', marginBottom: 24, fontSize: 15, lineHeight: 22 }]}>
-              {dadosFeedback.mensagem}
-            </Text>
-            
-            <TouchableOpacity 
-              style={[styles.modalSubmitButton, { backgroundColor: dadosFeedback.erro ? "#EF4444" : primaryColor, width: '100%' }]}
-              onPress={() => setModalFeedbackVisivel(false)}
-            >
-              <Text style={styles.modalSubmitButtonText}>Entendi</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -823,6 +764,18 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontStyle: 'italic',
   },
+  secondaryButton: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  secondaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
   metricContainer: {
     marginBottom: 14,
     gap: 6,
@@ -961,29 +914,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
-  modalOverlayCenter: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
   modalContentCard: {
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     padding: 24,
     paddingBottom: 40,
     maxHeight: '80%',
-  },
-  modalFeedbackCard: {
-    width: '100%',
-    borderRadius: 32,
-    padding: 32,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1025,42 +961,5 @@ const styles = StyleSheet.create({
   },
   modalOptionLabel: {
     fontSize: 15,
-  },
-  inputModal: {
-    borderRadius: 16,
-    padding: 16,
-    fontSize: 15,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  textAreaModal: {
-    borderRadius: 16,
-    padding: 16,
-    height: 100,
-    textAlignVertical: 'top',
-    fontSize: 15,
-    borderWidth: 1,
-    marginBottom: 16,
-  },
-  modalSubmitButton: {
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-  },
-  modalSubmitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  modalActionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalActionButton: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

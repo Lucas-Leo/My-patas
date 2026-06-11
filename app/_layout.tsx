@@ -1,11 +1,10 @@
-import { AppTheme, ThemeContext } from '@/context/ThemeContext';
+import { ThemeContext, type AppTheme } from '@/context/ThemeContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
-import 'react-native-reanimated';
 
 export default function RootLayout() {
   const systemColorScheme = useColorScheme();
@@ -27,8 +26,7 @@ export default function RootLayout() {
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>
       <ThemeProvider value={theme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="solicitacoesAdocao" options={{ headerShown: false }} />
+        <Stack initialRouteName="login">
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="criarconta" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
@@ -36,17 +34,18 @@ export default function RootLayout() {
           <Stack.Screen name="registerONG" options={{ headerShown: false }} />
           <Stack.Screen name="novasenha" options={{ headerShown: false }} />
           <Stack.Screen name="perfil" options={{ headerShown: false }} />
-          <Stack.Screen name="perfilONG" options={{ headerShown: false }} />
           <Stack.Screen name="editaruserComum" options={{ headerShown: false }} />
           <Stack.Screen name="home" options={{ headerShown: false }} />
           <Stack.Screen name="ongs" options={{ headerShown: false }} />
           <Stack.Screen name="favoritos" options={{ headerShown: false }} />
+          <Stack.Screen name="perfilONG" options={{ headerShown: false }} />
+
           <Stack.Screen name="adocao" options={{ headerShown: false }} />
           <Stack.Screen name="adocaoEtapa2" options={{ headerShown: false }} />
           <Stack.Screen name="adocaoEtapa3" options={{ headerShown: false }} />
           <Stack.Screen name="adocaoSucesso" options={{ headerShown: false }} />
           <Stack.Screen name="acompanharAdocao" options={{ headerShown: false }} />
-          <Stack.Screen name="adocaoDetalhes" options={{ headerShown: false }} />
+          <Stack.Screen name="solicitacoesAdocao" options={{ headerShown: false }} />
           <Stack.Screen name="gerenciarSolicitacoes" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="quests" options={{ headerShown: false }} />
