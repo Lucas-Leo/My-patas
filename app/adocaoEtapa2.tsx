@@ -13,24 +13,55 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
+  Alert,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  AdoptionPet,
+  Etapa1Adocao,
+  Etapa2Adocao,
+  getPetDisplayName,
+  getPetImageUri,
+  parseParam,
+  stringifyParam,
+} from '../src/utils/adocao';
 
 export default function AdocaoEtapa2() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  const pet = {
-    nome: 'Luke',
-    foto: require('@/assets/images/cachorro01.jpg'),
+  const fallbackPet: AdoptionPet = {
+    id: 0,
+    nome: 'Pet',
+    name: 'Pet',
+    idade: 'Idade nao informada',
+    ong: 'ONG nao informada',
+    foto: null,
+    imageUri: null,
   };
+  const fallbackEtapa1: Etapa1Adocao = {
+    nome: '',
+    idade: '',
+    telefone: '',
+    cidade: '',
+    moradia: '',
+    possuiAnimais: '',
+    possuiCriancas: '',
+  };
+  const pet = parseParam<AdoptionPet>(params.pet, fallbackPet);
+  const etapa1 = parseParam<Etapa1Adocao>(params.etapa1, fallbackEtapa1);
+  const petImageUri = getPetImageUri(pet);
+  const petImage = petImageUri
+    ? { uri: petImageUri }
+    : require('@/assets/images/cachorro01.jpg');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Etapa2Adocao>({
     motivacao: '',
     motivacaoOutro: '',
     experiencia: '',
@@ -49,6 +80,15 @@ export default function AdocaoEtapa2() {
   const slideAnim = useRef(new Animated.Value(30)).current;
   const modalScale = useRef(new Animated.Value(0.8)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
+  const navigationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (navigationTimeout.current) {
+        clearTimeout(navigationTimeout.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -74,6 +114,18 @@ export default function AdocaoEtapa2() {
   };
 
   const handleContinue = () => {
+    if (
+      !formData.motivacao ||
+      !formData.experiencia ||
+      !formData.apoioFamilia ||
+      !formData.rotina ||
+      !formData.financeiro ||
+      !formData.ambiente
+    ) {
+      Alert.alert('Campos obrigatorios', 'Responda todo o questionario para continuar.');
+      return;
+    }
+
     setShowFeedbackModal(true);
 
     Animated.parallel([
@@ -89,8 +141,20 @@ export default function AdocaoEtapa2() {
       }),
     ]).start();
 
-    setTimeout(() => {
-      router.push('/adocaoEtapa3');
+    if (navigationTimeout.current) {
+      clearTimeout(navigationTimeout.current);
+    }
+
+    navigationTimeout.current = setTimeout(() => {
+      setShowFeedbackModal(false);
+      router.replace({
+        pathname: '/adocaoEtapa3',
+        params: {
+          pet: stringifyParam(pet),
+          etapa1: stringifyParam(etapa1),
+          etapa2: stringifyParam(formData),
+        },
+      });
     }, 2200);
   };
 
@@ -211,7 +275,7 @@ export default function AdocaoEtapa2() {
 
             <View style={styles.petInfo}>
               <Image
-                source={pet.foto}
+                source={petImage}
                 style={styles.petImage}
                 resizeMode="cover"
               />
@@ -225,7 +289,7 @@ export default function AdocaoEtapa2() {
                     },
                   ]}
                 >
-                  {pet.nome} 🐶
+                  {getPetDisplayName(pet)} 🐶
                 </Text>
 
                 <Text
@@ -286,7 +350,7 @@ export default function AdocaoEtapa2() {
                 },
               ]}
             >
-              Queremos garantir que o {pet.nome} encontre
+              Queremos garantir que o {getPetDisplayName(pet)} encontre
               um lar cheio de amor ❤️
             </Text>
           </View>
@@ -698,7 +762,17 @@ export default function AdocaoEtapa2() {
           </View>
 
           {/* MODAL FEEDBACK */}
-          <Modal transparent visible={showFeedbackModal}>
+          <Modal
+            transparent
+            visible={showFeedbackModal}
+            onRequestClose={() => {
+              if (navigationTimeout.current) {
+                clearTimeout(navigationTimeout.current);
+              }
+
+              setShowFeedbackModal(false);
+            }}
+          >
             <View style={styles.modalOverlay}>
               <Animated.View
                 style={[

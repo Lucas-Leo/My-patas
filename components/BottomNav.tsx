@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { AntDesign, MaterialCommunityIcons } from '@expo/vector-icons';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import { getActiveProfile, getToken } from '@/src/utils/session';
 
 type NavPage = 'home' | 'ongs' | 'favoritos' | 'perfil';
 
@@ -48,6 +49,23 @@ export default function BottomNav({ isDark, activePage }: BottomNavProps) {
   const defaultColor = isDark ? '#90CAF9' : '#0E457D';
   const activeColor = isDark ? '#BBDEFB' : '#0E457D';
 
+  async function handleNavigate(item: (typeof navItems)[number]) {
+    if (item.key !== 'perfil') {
+      router.push(item.route);
+      return;
+    }
+
+    const token = await getToken();
+
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+
+    const profile = await getActiveProfile();
+    router.push(profile === 'ong' ? '/perfilONG' : '/perfil');
+  }
+
   return (
     <View style={[styles.bottomNav, { backgroundColor: isDark ? '#181818' : '#fff' }]}>
       {navItems.map((item) => {
@@ -55,7 +73,7 @@ export default function BottomNav({ isDark, activePage }: BottomNavProps) {
         const color = isActive ? activeColor : defaultColor;
 
         return (
-          <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => router.push(item.route)}>
+          <TouchableOpacity key={item.key} style={styles.navItem} onPress={() => handleNavigate(item)}>
             {item.renderIcon(color)}
             <View
               style={[

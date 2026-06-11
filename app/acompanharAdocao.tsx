@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,54 +7,31 @@ import {
   Image,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
   FlatList,
   Modal,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import api from '../src/service/api';
+import {
+  ApiSolicitacaoAdocao,
+  normalizarSolicitacaoAdocao,
+} from '../src/utils/adocao';
+import { obterIdUsuarioLogado } from '../src/utils/pets';
+
+const fallbackPetImage = require('@/assets/images/cachorro01.jpg');
 
 export default function MyAdoptions() {
   const router = useRouter();
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  // MOCK API
-  const [adoptions] = useState([
-    {
-      id: '1',
-      petName: 'Luke',
-      ong: 'ONG Paz e Amor',
-      date: '12 Maio 2026',
-      status: 'Em análise',
-      statusColor: '#F7B500',
-      statusBg: '#FFF6D8',
-      icon: 'time-outline',
-      image: require('@/assets/images/cachorro01.jpg'),
-    },
-    {
-      id: '2',
-      petName: 'Mia',
-      ong: 'ONG Amigos de Patas',
-      date: '08 Maio 2026',
-      status: 'Entrevista agendada',
-      statusColor: '#8B5CF6',
-      statusBg: '#EFE7FF',
-      icon: 'calendar-outline',
-      image: require('@/assets/images/gato01.jpg'),
-    },
-    {
-      id: '3',
-      petName: 'Thor',
-      ong: 'ONG Vida Animal',
-      date: '03 Maio 2026',
-      status: 'Aprovado',
-      statusColor: '#22C55E',
-      statusBg: '#DCFCE7',
-      icon: 'checkmark-circle-outline',
-      image: require('@/assets/images/cachorro02.jpg'),
-    },
-  ]);
+  const [adoptions, setAdoptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedAdoption, setSelectedAdoption] = useState<any>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -63,6 +40,7 @@ export default function MyAdoptions() {
   const getAdoptionSteps = (currentStatus: string) => {
     // Definimos a hierarquia de status para saber até qual passo preencher
     let currentIndex = 0;
+    if (currentStatus === 'Em analise') currentIndex = 1;
     if (currentStatus === 'Em análise') currentIndex = 1;
     if (currentStatus === 'Entrevista agendada') currentIndex = 2;
     if (currentStatus === 'Aprovado') currentIndex = 3;
@@ -122,6 +100,46 @@ export default function MyAdoptions() {
       }),
     ]).start();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      async function carregarAdocoes() {
+        try {
+          setLoading(true);
+
+          const idUsuario = await obterIdUsuarioLogado();
+
+          if (!idUsuario) {
+            setAdoptions([]);
+            return;
+          }
+
+          const response = await api.get(`/solicitacoesadocao/usuario/${idUsuario}`);
+          const adocoes = Array.isArray(response.data)
+            ? response.data.map((item: ApiSolicitacaoAdocao) => {
+                const normalizada = normalizarSolicitacaoAdocao(item);
+
+                return {
+                  ...normalizada,
+                  image: normalizada.imageUri
+                    ? { uri: normalizada.imageUri }
+                    : fallbackPetImage,
+                };
+              })
+            : [];
+
+          setAdoptions(adocoes);
+        } catch (error) {
+          setAdoptions([]);
+          Alert.alert('Erro', 'Nao foi possivel carregar suas adocoes.');
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      carregarAdocoes();
+    }, [])
+  );
 
   const animateCard = () => {
     Animated.sequence([
@@ -458,7 +476,9 @@ export default function MyAdoptions() {
         </View>
 
         {/* LISTA */}
-        {adoptions.length > 0 ? (
+        {loading ? (
+          <ActivityIndicator size="large" color={isDark ? '#FF80AB' : '#FF2BAA'} />
+        ) : adoptions.length > 0 ? (
           <FlatList
             data={adoptions}
             keyExtractor={(item) => item.id}
@@ -642,32 +662,6 @@ export default function MyAdoptions() {
             </View>
 
             {/* BOTÃO */}
-            <TouchableOpacity
-              activeOpacity={0.9}
-              onPress={() => {
-                setShowDetailsModal(false);
-
-                router.push({
-                  pathname: '/adocaoDetalhes',
-                  params: {
-                    petName: selectedAdoption?.petName,
-                    ong: selectedAdoption?.ong,
-                    status: selectedAdoption?.status,
-                    date: selectedAdoption?.date,
-                  },
-                });
-              }}
-              style={[
-                styles.fullDetailsButton,
-                {
-                  backgroundColor: isDark ? '#FF80AB' : '#FF2BAA',
-                },
-              ]}
-            >
-              <Text style={styles.fullDetailsText}>
-                Abrir detalhes completos
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1000,24 +994,4 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
 
-  fullDetailsButton: {
-    marginTop: 10,
-
-    paddingVertical: 18,
-    borderRadius: 22,
-
-    justifyContent: 'center',
-    alignItems: 'center',
-
-    shadowColor: '#FF2BAA',
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-
-  fullDetailsText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
 });

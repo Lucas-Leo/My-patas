@@ -189,11 +189,51 @@ export default function AdoptionDetails() {
     },
   ]);
 
+  const getParam = (value: string | string[] | undefined) =>
+    Array.isArray(value) ? value[0] : value;
+
+  const adoptionFromParams = {
+    id: String(getParam(params.petName) || 'api'),
+    petName: getParam(params.petName) || 'Pet',
+    age: getParam(params.idade) || 'Idade nao informada',
+    ong: getParam(params.ong) || 'ONG nao informada',
+    image: getParam(params.imageUri)
+      ? { uri: getParam(params.imageUri) }
+      : require('@/assets/images/cachorro01.jpg'),
+    currentStatus: getParam(params.status) || 'Solicitacao enviada',
+    estimatedTime: '2 a 5 dias uteis',
+    updates: [
+      {
+        id: 1,
+        title: 'Solicitacao enviada com sucesso',
+        date: getParam(params.date) || 'Hoje',
+      },
+    ],
+    messages: [],
+    checklist: [
+      {
+        id: 1,
+        title: 'Entrevista realizada',
+        done: false,
+      },
+      {
+        id: 2,
+        title: 'Visita concluida',
+        done: false,
+      },
+      {
+        id: 3,
+        title: 'Documentacao enviada',
+        done: false,
+      },
+    ],
+  };
+
   // PEGA O PET SELECIONADO
   const adoption =
     adoptions.find(
       (item) => item.petName === params.petName
-    ) || adoptions[0];
+    ) || adoptionFromParams;
 
   // STATUS CONFIG
   const statusConfig: any = {
@@ -231,6 +271,7 @@ export default function AdoptionDetails() {
   // TIMELINE DINÂMICA
   const getTimelineSteps = () => {
     let currentIndex = 0;
+    if (adoption.currentStatus === 'Em analise') currentIndex = 1;
 
     if (adoption.currentStatus === 'Em análise')
       currentIndex = 1;
@@ -341,7 +382,8 @@ export default function AdoptionDetails() {
   }, []);
 
   const currentStatus =
-    statusConfig[adoption.currentStatus];
+    statusConfig[adoption.currentStatus] ||
+    statusConfig['SolicitaÃ§Ã£o enviada'];
 
   const openWhatsApp = async () => {
     const url =
@@ -498,6 +540,7 @@ export default function AdoptionDetails() {
             </Text>
 
             <View
+            
               style={[
                 styles.mainStatusBadge,
                 {
@@ -527,6 +570,8 @@ export default function AdoptionDetails() {
                 {adoption.currentStatus}
               </Text>
             </View>
+
+            
 
             <View
               style={[

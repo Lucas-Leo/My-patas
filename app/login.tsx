@@ -15,6 +15,7 @@ import axios from "axios";
 import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
+import { clearSession, setActiveProfile } from "../src/utils/session";
 
 // ======================================================
 // LOGO
@@ -73,7 +74,7 @@ export default function Login() {
   // ======================================================
   useEffect(() => {
 
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
 
     if (codeModalVisible && timer > 0) {
 
@@ -195,6 +196,8 @@ export default function Login() {
         };
 
         // Salva usuário fictício
+        await clearSession();
+
         await AsyncStorage.setItem(
           "usuario",
           JSON.stringify(fakeUser)
@@ -206,6 +209,9 @@ export default function Login() {
           "token-ficticio-123"
         );
 
+        await AsyncStorage.removeItem("ong");
+        await setActiveProfile("usuario");
+
         // ======================================================
         // ABRE MODAL SUCESSO
         // ======================================================
@@ -216,7 +222,7 @@ export default function Login() {
 
           setSuccessModalVisible(false);
 
-          router.push("/home");
+          router.replace("/home");
 
         }, 2000);
 
@@ -235,9 +241,12 @@ export default function Login() {
         : null;
 
       const usuarioApi = response.data.usuario;
+      const loginOng = usuarioApi?.loginOng === true;
 
       const mesmoEmail =
         usuarioAnterior?.email === usuarioApi?.email;
+
+      await clearSession();
 
       await AsyncStorage.setItem(
         "usuario",
@@ -267,6 +276,8 @@ export default function Login() {
         );
       }
 
+      await setActiveProfile(loginOng ? "ong" : "usuario");
+
       // ======================================================
       // ABRE MODAL SUCESSO
       // ======================================================
@@ -277,7 +288,7 @@ export default function Login() {
 
         setSuccessModalVisible(false);
 
-        router.push("/home");
+          router.replace("/home");
 
       }, 2000);
 

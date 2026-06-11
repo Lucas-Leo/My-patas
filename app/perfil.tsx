@@ -23,6 +23,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import * as ImagePicker from 'expo-image-picker';
+import { clearSession, setActiveProfile } from '@/src/utils/session';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
@@ -72,6 +73,7 @@ const ProfileScreen = () => {
   const [cidade, setCidade] = useState("");
   const [senha, setSenha] = useState("");
   const [usuario, setUsuario] = useState<UsuarioPerfil | null>(null);
+  const [temOng, setTemOng] = useState(false);
 
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
@@ -160,6 +162,9 @@ const ProfileScreen = () => {
   async function carregarUsuario() {
 
     try {
+      const ongSalva = await AsyncStorage.getItem("ong");
+      setTemOng(!!ongSalva);
+
       const idUsuario = await obterIdUsuarioLogado();
 
       if (!idUsuario) {
@@ -391,12 +396,7 @@ const ProfileScreen = () => {
 
   async function confirmarLogout() {
 
-    await AsyncStorage.multiRemove([
-      "usuario",
-      "token",
-      "ong",
-      "fotoPerfil"
-    ]);
+    await clearSession();
 
     router.replace("/login");
   }
@@ -420,12 +420,7 @@ const ProfileScreen = () => {
 
   async function confirmarExclusao() {
 
-    await AsyncStorage.multiRemove([
-      "usuario",
-      "token",
-      "ong",
-      "fotoPerfil"
-    ]);
+    await clearSession();
 
     setFeedbackEmoji("🗑️");
 
@@ -438,6 +433,18 @@ const ProfileScreen = () => {
     );
 
     setFeedbackAction("deleted");
+  }
+
+  async function abrirContaOng() {
+    const ongSalva = await AsyncStorage.getItem("ong");
+
+    if (ongSalva) {
+      await setActiveProfile("ong");
+      router.replace("/perfilONG");
+      return;
+    }
+
+    router.push("/registerONG");
   }
 
   function getFieldTitle() {
@@ -559,6 +566,7 @@ const ProfileScreen = () => {
         transparent
         animationType="fade"
         visible={feedbackVisible}
+        onRequestClose={() => setFeedbackVisible(false)}
       >
 
         <View style={styles.modalOverlay}>
@@ -925,7 +933,7 @@ const ProfileScreen = () => {
                 : "#FFFFFF"
             }
           ]}
-          onPress={() => router.push("/editaruserComum")}
+          onPress={abrirContaOng}
           activeOpacity={0.8}
         >
 
@@ -934,7 +942,7 @@ const ProfileScreen = () => {
             <View style={styles.fullEditIconContainer}>
 
               <Icon
-                name="account-edit-outline"
+                name={temOng ? "home-heart" : "home-plus-outline"}
                 size={26}
                 color="#FFFFFF"
               />
@@ -953,7 +961,7 @@ const ProfileScreen = () => {
                   }
                 ]}
               >
-                Editar perfil completo
+                {temOng ? "Ir para perfil da ONG" : "Criar conta ONG"}
               </Text>
 
               <Text
@@ -966,7 +974,9 @@ const ProfileScreen = () => {
                   }
                 ]}
               >
-                Acesse endereço e outros dados
+                {temOng
+                  ? "Acesse a conta institucional vinculada"
+                  : "Cadastre uma ONG vinculada ao seu usuario"}
               </Text>
 
             </View>

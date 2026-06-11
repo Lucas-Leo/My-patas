@@ -14,25 +14,71 @@ import {
   KeyboardAvoidingView,
   Platform,
   TextInput,
+  Alert,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import api from '../src/service/api';
+import {
+  AdoptionPet,
+  Etapa1Adocao,
+  Etapa2Adocao,
+  formatarResposta,
+  formatarSimNao,
+  getPetDisplayName,
+  getPetImageUri,
+  montarExperiencia,
+  montarMotivacao,
+  parseParam,
+  stringifyParam,
+} from '../src/utils/adocao';
+import { obterIdUsuarioLogado } from '../src/utils/pets';
 
 export default function AdocaoEtapa3() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
   // DADOS MOCKADOS
-  const pet = {
-    nome: 'Luke',
-    idade: '2 anos',
-    ong: 'ONG Paz e Amor',
-    foto: require('@/assets/images/cachorro01.jpg'),
+  const fallbackPet: AdoptionPet = {
+    id: 0,
+    nome: 'Pet',
+    name: 'Pet',
+    idade: 'Idade nao informada',
+    ong: 'ONG nao informada',
+    foto: null,
+    imageUri: null,
   };
+  const fallbackEtapa1: Etapa1Adocao = {
+    nome: '',
+    idade: '',
+    telefone: '',
+    cidade: '',
+    moradia: '',
+    possuiAnimais: '',
+    possuiCriancas: '',
+  };
+  const fallbackEtapa2: Etapa2Adocao = {
+    motivacao: '',
+    motivacaoOutro: '',
+    experiencia: '',
+    experienciaTexto: '',
+    apoioFamilia: '',
+    rotina: '',
+    financeiro: '',
+    ambiente: '',
+  };
+  const pet = parseParam<AdoptionPet>(params.pet, fallbackPet);
+  const etapa1Recebida = parseParam<Etapa1Adocao>(params.etapa1, fallbackEtapa1);
+  const etapa2Recebida = parseParam<Etapa2Adocao>(params.etapa2, fallbackEtapa2);
+  const petImageUri = getPetImageUri(pet);
+  const petImage = petImageUri
+    ? { uri: petImageUri }
+    : require('@/assets/images/cachorro01.jpg');
 
   // ESTADOS EDITÁVEIS
   const [etapa1, setEtapa1] = useState({
@@ -51,6 +97,23 @@ export default function AdocaoEtapa3() {
   });
 
   // MODAIS DE EDIÇÃO
+  useEffect(() => {
+    setEtapa1({
+      nome: etapa1Recebida.nome,
+      cidade: etapa1Recebida.cidade,
+      moradia: formatarResposta(etapa1Recebida.moradia),
+      animais: formatarSimNao(etapa1Recebida.possuiAnimais),
+      criancas: formatarSimNao(etapa1Recebida.possuiCriancas),
+    });
+
+    setEtapa2({
+      motivacao: montarMotivacao(etapa2Recebida),
+      experiencia: montarExperiencia(etapa2Recebida),
+      rotina: formatarResposta(etapa2Recebida.rotina),
+      financeiro: formatarResposta(etapa2Recebida.financeiro),
+    });
+  }, []);
+
   const [showEditDadosModal, setShowEditDadosModal] =
     useState(false);
 
@@ -71,6 +134,15 @@ export default function AdocaoEtapa3() {
 
   const modalScale = useRef(new Animated.Value(0.8)).current;
   const modalOpacity = useRef(new Animated.Value(0)).current;
+  const navigationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (navigationTimeout.current) {
+        clearTimeout(navigationTimeout.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     Animated.parallel([
@@ -108,9 +180,58 @@ export default function AdocaoEtapa3() {
 
     animateButton();
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    setTimeout(() => {
+      const idUsuario = await obterIdUsuarioLogado();
+
+      if (!idUsuario) {
+        setLoading(false);
+        Alert.alert('Login necessario', 'Entre na sua conta para enviar a solicitacao.');
+        return;
+      }
+
+      if (!pet.id) {
+        setLoading(false);
+        Alert.alert('Pet invalido', 'Nao foi possivel identificar o pet escolhido.');
+        return;
+      }
+
+      const solicitacaoResponse = await api.post('/solicitacoesadocao', {
+        fk_idpet: pet.id,
+        fk_idusuario: idUsuario,
+        status: 'Solicitacao enviada',
+      });
+
+      const idSolicitacao =
+        solicitacaoResponse.data?.id ||
+        solicitacaoResponse.data?.idsolicitacao;
+
+      if (!idSolicitacao) {
+        throw new Error('A API nao retornou o id da solicitacao.');
+      }
+
+      await api.post('/adocaoetapa1', {
+        fk_idsolicitacao: idSolicitacao,
+        nome: etapa1.nome,
+        idade: etapa1Recebida.idade,
+        telefone: etapa1Recebida.telefone,
+        cidade: etapa1.cidade,
+        moradia: etapa1.moradia,
+        possui_animais: etapa1.animais,
+        possui_criancas: etapa1.criancas,
+      });
+
+      await api.post('/adocaoetapa2', {
+        fk_idsolicitacao: idSolicitacao,
+        motivacao: etapa2.motivacao,
+        experiencia: etapa2.experiencia,
+        apoio_familia: formatarResposta(etapa2Recebida.apoioFamilia),
+        rotina: etapa2.rotina,
+        financeiro: etapa2.financeiro,
+        ambiente: formatarResposta(etapa2Recebida.ambiente),
+      });
+
       setLoading(false);
 
       setShowSuccessModal(true);
@@ -128,10 +249,24 @@ export default function AdocaoEtapa3() {
         }),
       ]).start();
 
-      setTimeout(() => {
-        router.push('/adocaoSucesso');
+      if (navigationTimeout.current) {
+        clearTimeout(navigationTimeout.current);
+      }
+
+      navigationTimeout.current = setTimeout(() => {
+        setShowSuccessModal(false);
+        router.replace({
+          pathname: '/adocaoSucesso',
+          params: {
+            pet: stringifyParam(pet),
+            idSolicitacao: String(idSolicitacao),
+          },
+        });
       }, 2400);
-    }, 2500);
+    } catch (error) {
+      setLoading(false);
+      Alert.alert('Erro', 'Nao foi possivel enviar sua solicitacao de adocao.');
+    }
   };
 
   const renderInfoRow = (
@@ -218,7 +353,7 @@ export default function AdocaoEtapa3() {
 
             <View style={styles.petInfo}>
               <Image
-                source={pet.foto}
+                source={petImage}
                 style={styles.petImage}
                 resizeMode="cover"
               />
@@ -232,7 +367,7 @@ export default function AdocaoEtapa3() {
                     },
                   ]}
                 >
-                  {pet.nome} 🐶
+                  {getPetDisplayName(pet)} 🐶
                 </Text>
 
                 <Text
@@ -342,7 +477,7 @@ export default function AdocaoEtapa3() {
 
               <View style={styles.petCardContent}>
                 <Image
-                  source={pet.foto}
+                  source={petImage}
                   style={styles.largePetImage}
                   resizeMode="cover"
                 />
@@ -356,7 +491,7 @@ export default function AdocaoEtapa3() {
                       },
                     ]}
                   >
-                    {pet.nome}
+                    {getPetDisplayName(pet)}
                   </Text>
 
                   <Text
@@ -1101,7 +1236,11 @@ export default function AdocaoEtapa3() {
           </Modal>
 
           {/* MODAL SUCESSO */}
-          <Modal transparent visible={showSuccessModal}>
+          <Modal
+            transparent
+            visible={showSuccessModal}
+            onRequestClose={() => setShowSuccessModal(false)}
+          >
             <View style={styles.modalOverlay}>
               <Animated.View
                 style={[

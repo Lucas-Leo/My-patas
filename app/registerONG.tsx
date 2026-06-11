@@ -46,14 +46,14 @@ export default function RegisterONG(){
     password2
   );
 
-  function abrirModal(title,message,redirect = false){
+  function abrirModal(title: string, message: string, redirect = false){
     setModalTitle(title);
     setModalMessage(message);
     setShowRedirectButton(redirect);
     setModalVisible(true);
   }
 
-  function mascaraCNPJ(value){
+  function mascaraCNPJ(value: string){
     value = value.replace(/\D/g,"")
     value = value.replace(/^(\d{2})(\d)/,"$1.$2")
     value = value.replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3")
@@ -62,54 +62,54 @@ export default function RegisterONG(){
     return value
   }
 
-  function mascaraTelefone(value){
+  function mascaraTelefone(value: string){
     value = value.replace(/\D/g,"")
     value = value.replace(/^(\d{2})(\d)/g,"($1) $2")
     value = value.replace(/(\d)(\d{4})$/,"$1-$2")
     return value
   }
 
-  function validarCNPJ(cnpj){
-    const numero = cnpj.replace(/\D/g,"")
-    return numero.length === 14
-  }
+  // function validarCNPJ(cnpj){
+  //   const numero = cnpj.replace(/\D/g,"")
+  //   return numero.length === 14
+  // }
 
-  function validarTelefone(telefone){
+  function validarTelefone(telefone: string){
     const numero = telefone.replace(/\D/g,"")
     return numero.length >= 10
   }
 
-  function validarEmail(email){
+  function validarEmail(email: string){
     const regex = /\S+@\S+\.\S+/
     return regex.test(email)
   }
 
   // Função assíncrona para consultar a API gratuita da BrasilAPI
-  async function verificarCNPJNoRegistro(cnpjLimpo) {
-    try {
-      const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+  // async function verificarCNPJNoRegistro(cnpjLimpo) {
+  //   try {
+  //     const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
       
-      if (response.status === 404) {
-        return { valido: false, mensagem: "CNPJ não encontrado na base de dados da Receita Federal." };
-      }
+  //     if (response.status === 404) {
+  //       return { valido: false, mensagem: "CNPJ não encontrado na base de dados da Receita Federal." };
+  //     }
 
-      if (!response.ok) {
-        return { valido: false, mensagem: "Erro ao conectar com o serviço de verificação. Tente novamente." };
-      }
+  //     if (!response.ok) {
+  //       return { valido: false, mensagem: "Erro ao conectar com o serviço de verificação. Tente novamente." };
+  //     }
 
-      const dados = await response.json();
+  //     const dados = await response.json();
 
-      // Verifica se a empresa/ONG está ativa
-      if (dados.situacao_cadastral !== 2 && dados.descricao_situacao_cadastral !== "ATIVA") {
-        return { valido: false, mensagem: `Este CNPJ não está ativo (Situação: ${dados.descricao_situacao_cadastral || 'Inativa'}).` };
-      }
+  //     // Verifica se a empresa/ONG está ativa
+  //     if (dados.situacao_cadastral !== 2 && dados.descricao_situacao_cadastral !== "ATIVA") {
+  //       return { valido: false, mensagem: `Este CNPJ não está ativo (Situação: ${dados.descricao_situacao_cadastral || 'Inativa'}).` };
+  //     }
 
-      return { valido: true, dados };
-    } catch (error) {
-      console.log("Erro na requisição da API:", error);
-      return { valido: false, mensagem: "Não foi possível validar o CNPJ no momento. Verifique sua conexão." };
-    }
-  }
+  //     return { valido: true, dados };
+  //   } catch (error) {
+  //     console.log("Erro na requisição da API:", error);
+  //     return { valido: false, mensagem: "Não foi possível validar o CNPJ no momento. Verifique sua conexão." };
+  //   }
+  // }
 
   async function onClickRegistrarONG(){
     // Evita cliques múltiplos enquanto a API processa
@@ -136,10 +136,10 @@ export default function RegisterONG(){
         return
       }
 
-      if(!validarCNPJ(cnpj)){
-        abrirModal("Erro", "Formato de CNPJ inválido.")
-        return
-      }
+      // if(!validarCNPJ(cnpj)){
+      //   abrirModal("Erro", "Formato de CNPJ inválido.")
+      //   return
+      // }
 
       if(!validarTelefone(celular)){
         abrirModal("Erro", "Telefone inválido.")
@@ -154,13 +154,13 @@ export default function RegisterONG(){
       // --- 1º PASSO: VALIDAÇÃO DO CNPJ NA API EXTERNA ---
       setLoading(true);
       const cnpjLimpo = cnpj.replace(/\D/g, "");
-      const resultadoAPI = await verificarCNPJNoRegistro(cnpjLimpo);
+      // const resultadoAPI = await verificarCNPJNoRegistro(cnpjLimpo);
       setLoading(false);
 
-      if (!resultadoAPI.valido) {
-        abrirModal("CNPJ Inválido/Inativo", resultadoAPI.mensagem);
-        return;
-      }
+      // if (!resultadoAPI.valido) {
+      //   abrirModal("CNPJ Inválido/Inativo", resultadoAPI.mensagem);
+      //   return;
+      // }
       
       // --- 2º PASSO: AGORA VERIFICA SE O USUÁRIO COMUM JÁ EXISTE ---
       if(!usuarioComumCriado){
@@ -177,7 +177,7 @@ export default function RegisterONG(){
         "Sucesso",
         "Conta de ONG criada com sucesso!"
       )
-      console.log("Cadastro ONG realizado com sucesso", resultadoAPI.dados)
+      // console.log("Cadastro ONG realizado com sucesso", resultadoAPI.dados)
 
     } catch(error) {
       setLoading(false);

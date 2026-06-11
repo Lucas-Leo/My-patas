@@ -13,33 +13,53 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  AdoptionPet,
+  Etapa1Adocao,
+  getPetDisplayName,
+  getPetImageUri,
+  parseParam,
+  stringifyParam,
+} from '../src/utils/adocao';
 
 const { width } = Dimensions.get('window');
 
 export default function ProcessoAdocao() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
   // PET MOCKADO
   // futuramente virá via params/navigation
-  const pet = {
-    nome: 'Luke',
-    idade: '2 anos',
-    foto: require('@/assets/images/cachorro01.jpg'),
+  const fallbackPet: AdoptionPet = {
+    id: 0,
+    nome: 'Pet',
+    name: 'Pet',
+    idade: 'Idade nao informada',
+    ong: 'ONG nao informada',
+    foto: null,
+    imageUri: null,
   };
+  const pet = parseParam<AdoptionPet>(params.pet, fallbackPet);
+  const petImageUri = getPetImageUri(pet);
+  const petImage = petImageUri
+    ? { uri: petImageUri }
+    : require('@/assets/images/cachorro01.jpg');
 
   // ETAPAS
   const [currentStep, setCurrentStep] = useState(1);
 
   // FORM
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<Etapa1Adocao>({
     nome: '',
     idade: '',
     telefone: '',
@@ -69,6 +89,29 @@ export default function ProcessoAdocao() {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    async function carregarUsuario() {
+      const usuarioSalvo = await AsyncStorage.getItem('usuario');
+
+      if (!usuarioSalvo) return;
+
+      const usuario = JSON.parse(usuarioSalvo);
+      const cidade =
+        usuario?.endereco?.cidade ||
+        usuario?.cidade ||
+        '';
+
+      setFormData((prev) => ({
+        ...prev,
+        nome: prev.nome || usuario?.nome || '',
+        telefone: prev.telefone || usuario?.telefone || '',
+        cidade: prev.cidade || cidade,
+      }));
+    }
+
+    carregarUsuario();
+  }, []);
+
   const handleSelect = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -77,10 +120,29 @@ export default function ProcessoAdocao() {
   };
 
   const handleNext = () => {
+    if (
+      !formData.nome ||
+      !formData.idade ||
+      !formData.telefone ||
+      !formData.cidade ||
+      !formData.moradia ||
+      !formData.possuiAnimais ||
+      !formData.possuiCriancas
+    ) {
+      Alert.alert('Campos obrigatorios', 'Preencha todos os dados para continuar.');
+      return;
+    }
+
     setCurrentStep(2);
 
     // NAVEGA PARA A PRÓXIMA TELA
-    router.push('/adocaoEtapa2');
+    router.push({
+      pathname: '/adocaoEtapa2',
+      params: {
+        pet: stringifyParam(pet),
+        etapa1: stringifyParam(formData),
+      },
+    });
   };
 
   const renderOptionCard = (
@@ -189,7 +251,7 @@ export default function ProcessoAdocao() {
 
             <View style={styles.petInfo}>
               <Image
-                source={pet.foto}
+                source={petImage}
                 style={styles.petImage}
                 resizeMode="cover"
               />
@@ -203,7 +265,7 @@ export default function ProcessoAdocao() {
                     },
                   ]}
                 >
-                  {pet.nome} 🐶
+                  {getPetDisplayName(pet)} 🐶
                 </Text>
 
                 <Text

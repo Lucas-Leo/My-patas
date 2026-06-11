@@ -20,6 +20,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import api from '../src/service/api';
 import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
+import { stringifyParam, toAdoptionPet } from '../src/utils/adocao';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 const { width, height } = Dimensions.get('window');
@@ -328,10 +329,17 @@ export default function OngsScreen() {
   };
 
   const handleContinueAdoption = () => {
+    if (!selectedPet) return;
+
+    const pet = stringifyParam(toAdoptionPet(selectedPet));
+
     closeStepsModal();
     closePetModal();
     setTimeout(() => {
-      router.push('/adocao');
+      router.push({
+        pathname: '/adocao',
+        params: { pet },
+      });
     }, 250);
   };
 

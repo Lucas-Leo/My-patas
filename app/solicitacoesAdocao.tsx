@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
   FlatList,
   TextInput,
   ScrollView,
@@ -14,6 +15,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../src/service/api';
+import {
+  ApiSolicitacaoAdocao,
+  formatarDataAdocao,
+  getStatusConfig,
+} from '../src/utils/adocao';
+
+const fallbackPetImage = require('@/assets/images/cachorro01.jpg');
 
 // Definição da interface para tipagem segura das solicitações
 interface Solicitation {
@@ -29,6 +39,11 @@ interface Solicitation {
   currentStepIndex: number; // Define até onde a linha do tempo avançou (0 a 3)
 }
 
+type ApiSolicitacaoOng = ApiSolicitacaoAdocao & {
+  usuario?: string | null;
+  usuario_telefone?: string | null;
+};
+
 export default function SolicitacoesONG() {
   const router = useRouter();
   const { theme } = useThemeContext();
@@ -38,69 +53,8 @@ export default function SolicitacoesONG() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('Todas');
 
-  // MOCK API - Baseado nos requisitos de status e design do Patas Conscientes
-  const [solicitations] = useState<Solicitation[]>([
-    {
-      id: '1',
-      petName: 'Thor',
-      candidateName: 'Lucas Souza',
-      date: '15/06/2026',
-      status: 'Nova',
-      statusColor: '#3B82F6',
-      statusBg: '#EFF6FF',
-      icon: 'sparkles-outline',
-      image: require('@/assets/images/cachorro02.jpg'),
-      currentStepIndex: 0,
-    },
-    {
-      id: '2',
-      petName: 'Mia',
-      candidateName: 'Beatriz Silva',
-      date: '14/06/2026',
-      status: 'Em análise',
-      statusColor: '#F7B500',
-      statusBg: '#FFF6D8',
-      icon: 'time-outline',
-      image: require('@/assets/images/gato01.jpg'),
-      currentStepIndex: 1,
-    },
-    {
-      id: '3',
-      petName: 'Luke',
-      candidateName: 'Carlos Eduardo',
-      date: '12/06/2026',
-      status: 'Entrevista agendada',
-      statusColor: '#8B5CF6',
-      statusBg: '#EFE7FF',
-      icon: 'calendar-outline',
-      image: require('@/assets/images/cachorro01.jpg'),
-      currentStepIndex: 2,
-    },
-    {
-      id: '4',
-      petName: 'Luna',
-      candidateName: 'Mariana Costa',
-      date: '10/06/2026',
-      status: 'Aguardando documentos',
-      statusColor: '#EC4899',
-      statusBg: '#FCE7F3',
-      icon: 'document-text-outline',
-      image: require('@/assets/images/gato01.jpg'),
-      currentStepIndex: 2,
-    },
-    {
-      id: '5',
-      petName: 'Mel',
-      candidateName: 'Roberto Almeida',
-      date: '08/06/2026',
-      status: 'Aprovadas',
-      statusColor: '#22C55E',
-      statusBg: '#DCFCE7',
-      icon: 'checkmark-circle-outline',
-      image: require('@/assets/images/cachorro01.jpg'),
-      currentStepIndex: 3,
-    },
-  ]);
+  const [solicitations, setSolicitations] = useState<Solicitation[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // OPÇÕES DE FILTROS HORIZONTAIS (CHIPS)
   const filters = [
@@ -123,6 +77,52 @@ export default function SolicitacoesONG() {
   ];
 
   // ANIMAÇÕES DE ENTRADA
+  function normalizarTexto(value: string) {
+    return value
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+  }
+
+  async function obterIdOngLogada() {
+    const ongSalva = await AsyncStorage.getItem('ong');
+
+    if (!ongSalva) {
+      return null;
+    }
+
+    const ong = JSON.parse(ongSalva);
+    return ong?.id || ong?.idong || null;
+  }
+
+  function obterIndiceEtapa(status: string) {
+    const texto = normalizarTexto(status);
+
+    if (texto.includes('entrevista')) return 2;
+    if (texto.includes('aprovad') || texto.includes('reprov') || texto.includes('entregue')) return 3;
+    if (texto.includes('analise')) return 1;
+
+    return 0;
+  }
+
+  function normalizarSolicitacaoOng(item: ApiSolicitacaoOng): Solicitation {
+    const status = getStatusConfig(item.status);
+    const id = item.idsolicitacao || item.id;
+
+    return {
+      id: String(id || ''),
+      petName: item.pet || 'Pet',
+      candidateName: item.usuario || 'Interessado nao informado',
+      date: formatarDataAdocao(item.data_solicitacao || item.data_criacao || item.created_at),
+      status: status.status,
+      statusColor: status.statusColor,
+      statusBg: status.statusBg,
+      icon: status.icon,
+      image: item.pet_foto ? { uri: item.pet_foto } : fallbackPetImage,
+      currentStepIndex: obterIndiceEtapa(status.status),
+    };
+  }
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(25)).current;
 
@@ -142,13 +142,42 @@ export default function SolicitacoesONG() {
   }, []);
 
   // FILTRAGEM DINÂMICA
+  useEffect(() => {
+    async function carregarSolicitacoes() {
+      try {
+        setLoading(true);
+
+        const idOng = await obterIdOngLogada();
+
+        if (!idOng) {
+          setSolicitations([]);
+          return;
+        }
+
+        const response = await api.get(`/solicitacoesadocao/ong/${idOng}`);
+        const data = Array.isArray(response.data) ? response.data : [];
+        setSolicitations(data.map((item: ApiSolicitacaoOng) => normalizarSolicitacaoOng(item)));
+      } catch {
+        setSolicitations([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    carregarSolicitacoes();
+  }, []);
+
   const filteredSolicitations = solicitations.filter((item) => {
     const matchesSearch =
       item.petName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.candidateName.toLowerCase().includes(searchQuery.toLowerCase());
 
+    const statusNormalizado = normalizarTexto(item.status);
+    const filtroNormalizado = normalizarTexto(selectedFilter);
     const matchesFilter =
-      selectedFilter === 'Todas' || item.status === selectedFilter;
+      selectedFilter === 'Todas' ||
+      statusNormalizado.includes(filtroNormalizado.replace(/s$/, '')) ||
+      filtroNormalizado.includes(statusNormalizado);
 
     return matchesSearch && matchesFilter;
   });
@@ -450,7 +479,11 @@ export default function SolicitacoesONG() {
         </View>
 
         {/* LISTA DE SOLICITAÇÕES */}
-        {filteredSolicitations.length > 0 ? (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={isDark ? '#FF80AB' : '#FF2BAA'} />
+          </View>
+        ) : filteredSolicitations.length > 0 ? (
           <FlatList
             data={filteredSolicitations}
             keyExtractor={(item) => item.id}
@@ -529,6 +562,12 @@ const styles = StyleSheet.create({
   filterWrapper: {
     marginTop: 16,
     marginBottom: 6,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 48,
   },
   filterScroll: {
     paddingHorizontal: 20,

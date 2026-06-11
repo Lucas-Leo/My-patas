@@ -20,19 +20,31 @@ import { useRouter } from 'expo-router';
 import { useThemeContext } from '@/context/ThemeContext';
 import BottomNav from '@/components/BottomNav';
 import * as ImagePicker from 'expo-image-picker';
+import { clearSession, setActiveProfile } from '@/src/utils/session';
+import api from '@/src/service/api';
 
 const profileImage = require('@/assets/images/perfil.png');
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
 type ONGPerfil = {
+  id?: number;
+  idong?: number;
+  id_responsavel?: number | null;
+  id_usuario_responsavel?: number | null;
   nome?: string;
   email?: string;
   telefone?: string;
-  instagram?: string;
-  horario?: string;
+  descricao?: string | null;
+  foto?: string | null;
+  banner?: string | null;
   categoria?: string;
   endereco?: {
     cidade?: string;
+    bairro?: string;
+    rua?: string;
+    numero?: string;
+    cep?: string;
+    complemento?: string;
   };
 };
 
@@ -44,13 +56,17 @@ const PerfilONG = () => {
 
   const isDark = theme === 'dark';
 
-  const [nome, setNome] = useState('Instituto Patinhas Felizes');
-  const [email, setEmail] = useState('contato@patinhas.org');
-  const [telefone, setTelefone] = useState('(16) 99999-9999');
-  const [cidade, setCidade] = useState('Matão - SP');
-  const [instagram, setInstagram] = useState('@patinhasfelizes');
-  const [horario, setHorario] = useState('08h às 18h');
+  const [ong, setOng] = useState<ONGPerfil | null>(null);
+  const [idOng, setIdOng] = useState<number | null>(null);
+  const [nome, setNome] = useState('');
+  const [email, setEmail] = useState('');
+  const [telefone, setTelefone] = useState('');
+  const [cidade, setCidade] = useState('');
+  const [descricao, setDescricao] = useState('');
   const [categoria, setCategoria] = useState('ONG Parceira');
+  const [totalPets, setTotalPets] = useState('0');
+  const [totalAdocoes, setTotalAdocoes] = useState('0');
+  const [totalPendentes, setTotalPendentes] = useState('0');
 
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
@@ -102,25 +118,84 @@ const PerfilONG = () => {
 
   async function carregarONG() {
 
-    const ongSalva = await AsyncStorage.getItem('ong');
+    try {
+      const ongSalva = await AsyncStorage.getItem('ong');
 
-    if (ongSalva) {
+      if (!ongSalva) {
+        router.replace('/perfil');
+        return;
+      }
 
-      const ong = JSON.parse(ongSalva) as ONGPerfil;
+      const ongLocal = JSON.parse(ongSalva) as ONGPerfil;
+      const id = Number(ongLocal.id || ongLocal.idong);
 
-      setNome(ong.nome || '');
-      setEmail(ong.email || '');
-      setTelefone(ong.telefone || '');
-      setInstagram(ong.instagram || '');
-      setHorario(ong.horario || '');
-      setCategoria(ong.categoria || 'ONG Parceira');
-      setCidade(ong.endereco?.cidade || '');
-    }
+      if (!id) {
+        router.replace('/perfil');
+        return;
+      }
 
-    const fotoSalva = await AsyncStorage.getItem('fotoPerfilONG');
+      setIdOng(id);
 
-    if (fotoSalva) {
-      setFotoPerfil(fotoSalva);
+      const response = await api.get(`/ongs/${id}`);
+      const data = Array.isArray(response.data) ? response.data[0] : response.data;
+
+      const ongBanco: ONGPerfil = {
+        id: data.idong || id,
+        idong: data.idong || id,
+        id_responsavel: data.fk_idresponsavel,
+        id_usuario_responsavel: data.id_dono,
+        nome: data.nome || '',
+        email: data.email || '',
+        telefone: data.telefone || '',
+        descricao: data.descricao || '',
+        foto: data.foto || null,
+        banner: data.banner || null,
+        categoria: data.tipo || 'ONG Parceira',
+        endereco: {
+          rua: data.rua || '',
+          numero: data.numero || '',
+          bairro: data.bairro || '',
+          cidade: data.cidade || '',
+          cep: data.cep || '',
+          complemento: data.complemento || '',
+        },
+      };
+
+      setOng(ongBanco);
+      setNome(ongBanco.nome || '');
+      setEmail(ongBanco.email || '');
+      setTelefone(ongBanco.telefone || '');
+      setDescricao(ongBanco.descricao || '');
+      setCategoria(ongBanco.categoria || 'ONG Parceira');
+      setCidade(ongBanco.endereco?.cidade || '');
+      setFotoPerfil(ongBanco.foto || null);
+      await AsyncStorage.setItem('ong', JSON.stringify(ongBanco));
+
+      const [petsResponse, solicitacoesResponse] = await Promise.all([
+        api.get(`/ongs/contar/${id}`),
+        api.get(`/solicitacoesadocao/ong/${id}`),
+      ]);
+
+      const solicitacoes = Array.isArray(solicitacoesResponse.data)
+        ? solicitacoesResponse.data
+        : [];
+
+      setTotalPets(String(petsResponse.data || 0));
+      setTotalAdocoes(String(solicitacoes.length));
+      setTotalPendentes(
+        String(
+          solicitacoes.filter((item: any) => {
+            const status = String(item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+            return !status.includes('aprov') && !status.includes('reprov') && !status.includes('entregue');
+          }).length
+        )
+      );
+    } catch (error) {
+      setFeedbackEmoji('!');
+      setFeedbackTitle('Erro ao carregar ONG');
+      setFeedbackMessage('Nao foi possivel carregar os dados reais da ONG.');
+      setFeedbackAction('save');
+      setFeedbackVisible(true);
     }
   }
 
@@ -164,16 +239,50 @@ const PerfilONG = () => {
 
     const novaFoto = resultado.assets[0].uri;
 
-    setFotoPerfil(novaFoto);
+    try {
+      if (!idOng) {
+        throw new Error('ONG nao encontrada.');
+      }
 
-    await AsyncStorage.setItem(
-      'fotoPerfilONG',
-      novaFoto
-    );
+      const formData = new FormData();
+      const nomeArquivo = novaFoto.split('/').pop() || `ong-${Date.now()}.jpg`;
+      const extensao = nomeArquivo.split('.').pop()?.toLowerCase();
+
+      formData.append(
+        'foto',
+        {
+          uri: novaFoto,
+          name: nomeArquivo,
+          type: extensao === 'png' ? 'image/png' : 'image/jpeg',
+        } as unknown as Blob
+      );
+
+      const response = await api.patch(`/ongs/foto/${idOng}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const novaFotoBanco = response.data?.path || novaFoto;
+      setFotoPerfil(novaFotoBanco);
+
+      if (ong) {
+        const ongAtualizada = { ...ong, foto: novaFotoBanco };
+        setOng(ongAtualizada);
+        await AsyncStorage.setItem('ong', JSON.stringify(ongAtualizada));
+      }
+    } catch {
+      setFeedbackEmoji('!');
+      setFeedbackTitle('Erro ao salvar foto');
+      setFeedbackMessage('Nao foi possivel atualizar a foto da ONG.');
+      setFeedbackAction('save');
+      setFeedbackVisible(true);
+      return;
+    }
 
     setFeedbackEmoji('🖼️');
 
-    setFeedbackTitle('Logo updated');
+    setFeedbackTitle('Foto atualizada');
 
     setFeedbackMessage(
       'A foto institucional da ONG foi atualizada com sucesso.'
@@ -193,7 +302,35 @@ const PerfilONG = () => {
 
   async function saveEdit() {
 
-    switch (editingField) {
+    if (!idOng) {
+      setFeedbackEmoji('!');
+      setFeedbackTitle('Erro ao salvar');
+      setFeedbackMessage('ONG nao encontrada.');
+      setFeedbackAction('save');
+      setFeedbackVisible(true);
+      return;
+    }
+
+    const body: Record<string, string> = {};
+
+    if (editingField === 'nome') body.nome = tempValue;
+    if (editingField === 'email') body.email = tempValue;
+    if (editingField === 'telefone') body.telefone = tempValue;
+    if (editingField === 'descricao') body.descricao = tempValue;
+
+    if (!Object.keys(body).length) {
+      setModalVisible(false);
+      return;
+    }
+
+    try {
+      const response = await api.put(`/ongs/${idOng}`, body);
+
+      if (response.data?.success === false) {
+        throw new Error(response.data.message || 'Nao foi possivel atualizar a ONG.');
+      }
+
+      switch (editingField) {
 
       case 'nome':
         setNome(tempValue);
@@ -207,18 +344,24 @@ const PerfilONG = () => {
         setTelefone(tempValue);
         break;
 
-      case 'cidade':
-        setCidade(tempValue);
-        break;
-
-      case 'instagram':
-        setInstagram(tempValue);
-        break;
-
-      case 'horario':
-        setHorario(tempValue);
+      case 'descricao':
+        setDescricao(tempValue);
         break;
     }
+
+      const ongAtualizada = {
+        ...(ong || {}),
+        ...body,
+        id: idOng,
+        idong: idOng,
+        endereco: {
+          ...(ong?.endereco || {}),
+          cidade,
+        },
+      };
+
+      setOng(ongAtualizada);
+      await AsyncStorage.setItem('ong', JSON.stringify(ongAtualizada));
 
     setModalVisible(false);
 
@@ -233,6 +376,13 @@ const PerfilONG = () => {
     setFeedbackAction('save');
 
     setFeedbackVisible(true);
+    } catch {
+      setFeedbackEmoji('!');
+      setFeedbackTitle('Erro ao salvar');
+      setFeedbackMessage('Nao foi possivel atualizar os dados da ONG.');
+      setFeedbackAction('save');
+      setFeedbackVisible(true);
+    }
   }
 
   function logout() {
@@ -252,12 +402,7 @@ const PerfilONG = () => {
 
   async function confirmarLogout() {
 
-    await AsyncStorage.multiRemove([
-      'usuario',
-      'token',
-      'ong',
-      'fotoPerfilONG'
-    ]);
+    await clearSession();
 
     router.replace('/login');
   }
@@ -279,12 +424,7 @@ const PerfilONG = () => {
 
   async function confirmarExclusao() {
 
-    await AsyncStorage.multiRemove([
-      'usuario',
-      'token',
-      'ong',
-      'fotoPerfilONG'
-    ]);
+    await clearSession();
 
     setFeedbackEmoji('🗑️');
 
@@ -297,28 +437,21 @@ const PerfilONG = () => {
     setFeedbackAction('deleted');
   }
 
+  async function abrirPerfilUsuarioComum() {
+    await setActiveProfile('usuario');
+    router.replace('/perfil');
+  }
+
   function getFieldTitle() {
-
     switch (editingField) {
-
       case 'nome':
         return 'Editar nome da ONG';
-
       case 'email':
         return 'Editar e-mail';
-
       case 'telefone':
         return 'Editar telefone';
-
-      case 'cidade':
-        return 'Editar cidade';
-
-      case 'instagram':
-        return 'Editar Instagram';
-
-      case 'horario':
-        return 'Editar horário';
-
+      case 'descricao':
+        return 'Editar descricao';
       default:
         return '';
     }
@@ -418,6 +551,7 @@ const PerfilONG = () => {
         transparent
         animationType="fade"
         visible={feedbackVisible}
+        onRequestClose={() => setFeedbackVisible(false)}
       >
 
         <View style={styles.modalOverlay}>
@@ -631,7 +765,7 @@ const PerfilONG = () => {
               />
 
               <Text style={styles.infoTagText}>
-                {cidade}
+                {cidade || 'Cidade nao informada'}
               </Text>
 
             </View>
@@ -660,17 +794,17 @@ const PerfilONG = () => {
             {
               icon: 'paw',
               title: 'Pets',
-              value: '18'
+              value: totalPets
             },
             {
               icon: 'heart',
               title: 'Adoções',
-              value: '42'
+              value: totalAdocoes
             },
             {
               icon: 'file-document',
               title: 'Pendentes',
-              value: '7'
+              value: totalPendentes
             }
           ].map((item, index) => (
 
@@ -749,12 +883,11 @@ const PerfilONG = () => {
           </Text>
 
           {[
-            { label: 'Nome da ONG', value: nome, field: 'nome' },
-            { label: 'E-mail', value: email, field: 'email' },
-            { label: 'Telefone', value: telefone, field: 'telefone' },
-            { label: 'Cidade', value: cidade, field: 'cidade' },
-            { label: 'Instagram', value: instagram, field: 'instagram' },
-            { label: 'Funcionamento', value: horario, field: 'horario' },
+            { label: 'Nome da ONG', value: nome, field: 'nome', editable: true },
+            { label: 'E-mail', value: email, field: 'email', editable: true },
+            { label: 'Telefone', value: telefone, field: 'telefone', editable: true },
+            { label: 'Cidade', value: cidade || 'Nao informada', field: 'cidade', editable: false },
+            { label: 'Descricao', value: descricao || 'Nao informada', field: 'descricao', editable: true },
           ].map((item, index) => (
 
             <View key={index}>
@@ -791,11 +924,12 @@ const PerfilONG = () => {
 
                 </View>
 
-                <TouchableOpacity
-                  onPress={() =>
-                    openEditModal(item.field, item.value)
-                  }
-                >
+                {item.editable && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      openEditModal(item.field, item.value)
+                    }
+                  >
 
                   <Icon
                     name="square-edit-outline"
@@ -803,12 +937,13 @@ const PerfilONG = () => {
                     color="#FF42B3"
                   />
 
-                </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
 
               </View>
 
               {
-                index !== 5 &&
+                index !== 4 &&
                 <View style={styles.divider} />
               }
 
@@ -904,7 +1039,7 @@ const PerfilONG = () => {
                 : '#FFFFFF'
             }
           ]}
-          onPress={() => router.push('/editarPerfilONG')}
+          onPress={abrirPerfilUsuarioComum}
           activeOpacity={0.8}
         >
 
@@ -913,7 +1048,7 @@ const PerfilONG = () => {
             <View style={styles.fullEditIconContainer}>
 
               <Icon
-                name="account-edit-outline"
+                name="account-arrow-left-outline"
                 size={26}
                 color="#FFFFFF"
               />
@@ -932,7 +1067,7 @@ const PerfilONG = () => {
                   }
                 ]}
               >
-                Editar perfil completo
+                Ir para perfil de usuario
               </Text>
 
               <Text

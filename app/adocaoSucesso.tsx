@@ -13,21 +13,35 @@ import {
 
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  AdoptionPet,
+  getPetDisplayName,
+  getPetImageUri,
+  parseParam,
+} from '../src/utils/adocao';
 
 export default function AdocaoSucesso() {
   const router = useRouter();
+  const params = useLocalSearchParams();
 
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  // MOCK FUTURO BACKEND/API
-  const pet = {
-    nome: 'Luke',
-    idade: '2 anos',
-    ong: 'ONG Paz e Amor',
-    foto: require('@/assets/images/cachorro01.jpg'),
+  const fallbackPet: AdoptionPet = {
+    id: 0,
+    nome: 'Pet',
+    name: 'Pet',
+    idade: 'Idade nao informada',
+    ong: 'ONG nao informada',
+    foto: null,
+    imageUri: null,
   };
+  const pet = parseParam<AdoptionPet>(params.pet, fallbackPet);
+  const petImageUri = getPetImageUri(pet);
+  const petImage = petImageUri
+    ? { uri: petImageUri }
+    : require('@/assets/images/cachorro01.jpg');
 
   // ANIMAÇÕES
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -97,7 +111,7 @@ export default function AdocaoSucesso() {
     animateButton();
 
     setTimeout(() => {
-      router.push('/acompanharAdocao');
+      router.replace('/acompanharAdocao');
     }, 180);
   };
 
@@ -231,7 +245,7 @@ export default function AdocaoSucesso() {
 
             <View style={styles.petCardContent}>
               <Image
-                source={pet.foto}
+                source={petImage}
                 style={styles.petImage}
                 resizeMode="cover"
               />
@@ -247,7 +261,7 @@ export default function AdocaoSucesso() {
                     },
                   ]}
                 >
-                  {pet.nome} 🐶
+                  {getPetDisplayName(pet)} 🐶
                 </Text>
 
                 <Text
@@ -470,7 +484,7 @@ export default function AdocaoSucesso() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/home')}
+            onPress={() => router.replace('/home')}
             style={[
               styles.secondaryButton,
               {

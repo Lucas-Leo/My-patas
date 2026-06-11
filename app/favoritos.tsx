@@ -21,6 +21,7 @@ import BottomNav from '@/components/BottomNav';
 import { useRouter } from 'expo-router';
 import api from '../src/service/api';
 import { ApiPet, PetApp, normalizarPet, obterIdUsuarioLogado } from '../src/utils/pets';
+import { stringifyParam, toAdoptionPet } from '../src/utils/adocao';
 
 const logoApp = require('@/assets/images/LogoPataAzul.png');
 
@@ -129,10 +130,17 @@ export default function Favoritos() {
   };
 
   const handleContinue = () => {
+    if (!selectedPet) return;
+
+    const pet = stringifyParam(toAdoptionPet(selectedPet));
+
     closeModal();
 
     setTimeout(() => {
-      router.push('/adocao');
+      router.push({
+        pathname: '/adocao',
+        params: { pet },
+      });
     }, 250);
   };
 
