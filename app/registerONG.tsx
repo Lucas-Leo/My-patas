@@ -11,10 +11,45 @@ import {
 } from "react-native";
 
 import { Link, router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import api from "../src/service/api";
+import { setActiveProfile } from "../src/utils/session";
 
 const logoApp = require("@/assets/images/LogoPataAzul.png");
+
+type UsuarioComum = {
+  id?: number;
+  idusuario?: number;
+  nome?: string;
+  email?: string;
+  telefone?: string | null;
+  fk_idendereco?: number | null;
+  endereco?: {
+    cidade?: string | null;
+    bairro?: string | null;
+    rua?: string | null;
+    numero?: string | null;
+    cep?: string | null;
+    complemento?: string | null;
+    estado?: string | null;
+  };
+};
+
+type OngCriada = {
+  id: number;
+  idong: number;
+  id_usuario_responsavel?: number;
+  id_responsavel?: number | null;
+  nome: string;
+  email: string;
+  telefone: string;
+  descricao: string;
+  foto?: string | null;
+  banner?: string | null;
+  endereco?: UsuarioComum["endereco"];
+};
 
 export default function RegisterONG(){
 
@@ -28,7 +63,8 @@ export default function RegisterONG(){
   const [showConfirmPassword,setShowConfirmPassword] = useState(false);
   const [celular,setCelular] = useState("");
 
-  const [usuarioComumCriado,setUsuarioComumCriado] = useState(false);
+  const [usuarioLogado,setUsuarioLogado] = useState<UsuarioComum | null>(null);
+  const [tokenUsuario,setTokenUsuario] = useState<string | null>(null);
   const [loading, setLoading] = useState(false); // Estado para controlar a requisição da API
 
   const [modalVisible,setModalVisible] = useState(false);
@@ -52,6 +88,79 @@ export default function RegisterONG(){
     setShowRedirectButton(redirect);
     setModalVisible(true);
   }
+
+  function normalizarUsuarioSalvo(valor: string | null): UsuarioComum | null {
+    if (!valor) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(valor);
+      const usuario = parsed.usuario || parsed.data || parsed;
+      const id = usuario.id || usuario.idusuario;
+
+      if (!id) {
+        return null;
+      }
+
+      return {
+        ...usuario,
+        id,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function carregarUsuarioComumLogado() {
+    const [usuarioSalvo, tokenSalvo] = await Promise.all([
+      AsyncStorage.getItem("usuario"),
+      AsyncStorage.getItem("token"),
+    ]);
+
+    const usuarioLocal = normalizarUsuarioSalvo(usuarioSalvo);
+
+    if (!usuarioLocal || !tokenSalvo) {
+      setUsuarioLogado(null);
+      setTokenUsuario(null);
+      return null;
+    }
+
+    let usuarioAtual = usuarioLocal;
+
+    try {
+      const response = await api.get(`/usuarios/perfil-comum/${usuarioLocal.id}`);
+      const usuarioBanco = response.data?.data;
+
+      if (usuarioBanco) {
+        usuarioAtual = {
+          ...usuarioLocal,
+          ...usuarioBanco,
+          id: usuarioBanco.id || usuarioBanco.idusuario || usuarioLocal.id,
+        };
+        await AsyncStorage.setItem("usuario", JSON.stringify(usuarioAtual));
+      }
+    } catch {
+      // Se a API falhar aqui, ainda tentamos usar o usuario salvo localmente.
+    }
+
+    setUsuarioLogado(usuarioAtual);
+    setTokenUsuario(tokenSalvo);
+
+    if (!nomeresponsavel && usuarioAtual.nome) {
+      setNomeResponsavel(usuarioAtual.nome);
+    }
+
+    if (!celular && usuarioAtual.telefone) {
+      setCelular(mascaraTelefone(usuarioAtual.telefone));
+    }
+
+    return { usuario: usuarioAtual, token: tokenSalvo };
+  }
+
+  useEffect(() => {
+    carregarUsuarioComumLogado();
+  }, []);
 
   function mascaraCNPJ(value: string){
     value = value.replace(/\D/g,"")
@@ -163,21 +272,118 @@ export default function RegisterONG(){
       // }
       
       // --- 2º PASSO: AGORA VERIFICA SE O USUÁRIO COMUM JÁ EXISTE ---
-      if(!usuarioComumCriado){
+      const sessaoAtual = usuarioLogado && tokenUsuario
+        ? { usuario: usuarioLogado, token: tokenUsuario }
+        : await carregarUsuarioComumLogado();
+
+      if(!sessaoAtual?.usuario || !sessaoAtual.token){
         abrirModal(
-          "Conta necessária",
-          "Para criar uma conta de ONG, primeiro é necessário criar uma conta de usuário comum.",
+          "Conta necessaria",
+          "Para criar uma conta de ONG, primeiro faca login com uma conta de usuario comum.",
           true
         )
         return
       }
 
-      // Tudo validado com sucesso e conta comum vinculada
+      if(!sessaoAtual.usuario.fk_idendereco){
+        abrirModal(
+          "Perfil incompleto",
+          "Complete o perfil do usuario comum antes de criar uma ONG."
+        )
+        setTimeout(() => {
+          setModalVisible(false);
+          router.push("/completarperfil");
+        }, 900);
+        return
+      }
+
+      setLoading(true);
+
+      const descricaoPadrao = `ONG cadastrada por ${sessaoAtual.usuario.nome || nomeresponsavel}`;
+      const response = await api.post(
+        "/ongs",
+        {
+          nome,
+          cnpj: cnpjLimpo,
+          telefone: celular,
+          descricao: descricaoPadrao,
+          fk_idendereco: sessaoAtual.usuario.fk_idendereco,
+          comp_estatuto: null,
+          comp_cnpj: null,
+          email: login,
+          senha: password,
+          fk_idtipo: 4,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${sessaoAtual.token}`,
+          },
+        }
+      );
+
+      const idOngCriada = response.data?.id;
+
+      if(!idOngCriada){
+        throw new Error("Nao foi possivel identificar a ONG criada.");
+      }
+
+      let ongCriada: OngCriada = {
+        id: idOngCriada,
+        idong: idOngCriada,
+        id_usuario_responsavel: sessaoAtual.usuario.id || sessaoAtual.usuario.idusuario,
+        id_responsavel: response.data?.id_vinculo_responsavel || null,
+        nome,
+        email: login,
+        telefone: celular,
+        descricao: descricaoPadrao,
+        endereco: sessaoAtual.usuario.endereco,
+      };
+
+      try {
+        const ongResponse = await api.get(`/ongs/${idOngCriada}`);
+        const ongBanco = Array.isArray(ongResponse.data) ? ongResponse.data[0] : ongResponse.data;
+
+        if (ongBanco) {
+          ongCriada = {
+            ...ongCriada,
+            id: ongBanco.idong || idOngCriada,
+            idong: ongBanco.idong || idOngCriada,
+            id_usuario_responsavel: ongBanco.id_dono || ongCriada.id_usuario_responsavel,
+            id_responsavel: ongBanco.fk_idresponsavel || ongCriada.id_responsavel,
+            nome: ongBanco.nome || nome,
+            email: ongBanco.email || login,
+            telefone: ongBanco.telefone || celular,
+            descricao: ongBanco.descricao || descricaoPadrao,
+            foto: ongBanco.foto || null,
+            banner: ongBanco.banner || null,
+            endereco: {
+              rua: ongBanco.rua || sessaoAtual.usuario.endereco?.rua,
+              numero: ongBanco.numero || sessaoAtual.usuario.endereco?.numero,
+              bairro: ongBanco.bairro || sessaoAtual.usuario.endereco?.bairro,
+              cidade: ongBanco.cidade || sessaoAtual.usuario.endereco?.cidade,
+              cep: ongBanco.cep || sessaoAtual.usuario.endereco?.cep,
+              complemento: ongBanco.complemento || sessaoAtual.usuario.endereco?.complemento,
+            },
+          };
+        }
+      } catch {
+        // Mantem os dados minimos da ONG recem criada.
+      }
+
+      await AsyncStorage.setItem("ong", JSON.stringify(ongCriada));
+      await setActiveProfile("ong");
+      setLoading(false);
+
       abrirModal(
         "Sucesso",
         "Conta de ONG criada com sucesso!"
       )
-      // console.log("Cadastro ONG realizado com sucesso", resultadoAPI.dados)
+
+      setTimeout(() => {
+        setModalVisible(false);
+        router.replace("/perfilONG");
+      }, 900);
+      return;
 
     } catch(error) {
       setLoading(false);
