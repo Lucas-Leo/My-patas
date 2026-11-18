@@ -11,7 +11,7 @@ import {
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../src/service/api";
-import axios from "axios";
+import { apiErrorMessage } from "../src/utils/apiError";
 import { Link, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +32,7 @@ export default function Login() {
   const [login, setLogin] = useState<string | null>(null);
   const [password, setPassword] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   // ======================================================
@@ -122,23 +123,14 @@ export default function Login() {
   // MENSAGEM ERRO LOGIN
   // ======================================================
   function obterMensagemErro(error: unknown) {
-
-    if (axios.isAxiosError<{ message?: string; erro?: string }>(error)) {
-
-      return (
-        error.response?.data?.message ||
-        error.response?.data?.erro ||
-        "E-mail ou senha incorretos."
-      );
-    }
-
-    return "Nao foi possivel fazer login.";
+    return apiErrorMessage(error, "Não foi possível fazer login.");
   }
 
   // ======================================================
   // LOGIN
   // ======================================================
   async function OnClickLogin() {
+    if (loading) return;
 
     if (!login || !password) {
 
@@ -150,7 +142,7 @@ export default function Login() {
       return;
     }
 
-    if (!validateEmail(login)) {
+    if (!validateEmail(login.trim())) {
 
       Alert.alert(
         "Erro",
@@ -162,77 +154,15 @@ export default function Login() {
 
     try {
 
-      // ======================================================
-      // LOGIN FICTÍCIO
-      // ======================================================
-      const fakeEmail = "teste@teste.com";
-      const fakePassword = "123";
-
-      // Simula delay backend
-      await new Promise(resolve =>
-        setTimeout(resolve, 1500)
-      );
-
-      // ======================================================
-      // VALIDA LOGIN FICTÍCIO
-      // ======================================================
-      if (
-        login.trim().toLowerCase() === fakeEmail &&
-        password === fakePassword
-      ) {
-
-        // ======================================================
-        // DADOS FICTÍCIOS USUÁRIO
-        // ======================================================
-        const fakeUser = {
-          id: 1,
-          nome: "Usuário Teste",
-          email: fakeEmail,
-          telefone: "(16) 99999-9999",
-          endereco: {
-            cidade: "Matão",
-            estado: "SP",
-          }
-        };
-
-        // Salva usuário fictício
-        await clearSession();
-
-        await AsyncStorage.setItem(
-          "usuario",
-          JSON.stringify(fakeUser)
-        );
-
-        // Salva token fictício
-        await AsyncStorage.setItem(
-          "token",
-          "token-ficticio-123"
-        );
-
-        await AsyncStorage.removeItem("ong");
-        await setActiveProfile("usuario");
-
-        // ======================================================
-        // ABRE MODAL SUCESSO
-        // ======================================================
-        setSuccessModalVisible(true);
-
-        // Fecha sozinho após 2 segundos
-        setTimeout(() => {
-
-          setSuccessModalVisible(false);
-
-          router.replace("/home");
-
-        }, 2000);
-
-        return;
-      }
-
+      setLoading(true);
       const response = await api.post("/login", {
         email: login.trim().toLowerCase(),
         senha: password,
       });
+
+      if (!response.data?.usuario?.id || !response.data?.token) {
+        throw new Error("O servidor retornou uma sessão inválida.");
+      }
 
       const usuarioSalvo = await AsyncStorage.getItem("usuario");
 
@@ -298,6 +228,8 @@ export default function Login() {
         "Erro no login",
         obterMensagemErro(error)
       );
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -490,6 +422,9 @@ export default function Login() {
 
           <TextInput
             style={styles.input}
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="email-address"
             value={login || ""}
             placeholder="Digite seu e-mail ..."
             onChangeText={(e) => setLogin(e)}
@@ -553,10 +488,11 @@ export default function Login() {
           <TouchableOpacity
             style={styles.button}
             onPress={OnClickLogin}
+            disabled={loading || successModalVisible}
           >
 
             <Text style={styles.buttonText}>
-              Acessar
+              {loading ? "Entrando..." : "Acessar"}
             </Text>
 
           </TouchableOpacity>

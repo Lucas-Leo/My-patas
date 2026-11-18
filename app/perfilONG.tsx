@@ -1,3 +1,5 @@
+import { useAdoptionRefresh } from '../hooks/useAdoptionRefresh';
+import { getStatusConfig } from '../src/utils/adocao';
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
@@ -67,6 +69,17 @@ const PerfilONG = () => {
   const [totalPets, setTotalPets] = useState('0');
   const [totalAdocoes, setTotalAdocoes] = useState('0');
   const [totalPendentes, setTotalPendentes] = useState('0');
+
+  useAdoptionRefresh(async isCurrent => {
+    if (!idOng) return;
+    const response = await api.get('/solicitacoesadocao/ong/' + idOng);
+    if (!Array.isArray(response.data) || !isCurrent()) return;
+    setTotalAdocoes(String(response.data.length));
+    setTotalPendentes(String(response.data.filter((item: { status?: string }) => {
+      const step = getStatusConfig(item.status).step;
+      return step >= 0 && step < 4;
+    }).length));
+  }, String(idOng));
 
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
 
@@ -186,7 +199,8 @@ const PerfilONG = () => {
         String(
           solicitacoes.filter((item: any) => {
             const status = String(item.status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-            return !status.includes('aprov') && !status.includes('reprov') && !status.includes('entregue');
+            const step = getStatusConfig(status).step;
+            return step >= 0 && step < 4;
           }).length
         )
       );

@@ -1,6 +1,5 @@
 import {
   Animated,
-  Alert,
   Image,
   Modal,
   ScrollView,
@@ -12,7 +11,8 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../src/service/api";
-import axios from "axios";
+import { apiErrorMessage } from "../src/utils/apiError";
+import { clearSession } from "../src/utils/session";
 import { Ionicons } from '@expo/vector-icons';
 import { Link, useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -46,6 +46,7 @@ const ID_TIPO_USUARIO_PADRAO = 3;
 
 export default function Register() {
 
+  const [loading, setLoading] = useState(false);
   const [nome, setNome] = useState<string>("");
   const [login, setLogin] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -76,19 +77,7 @@ export default function Register() {
   );
 
   function obterMensagemErro(error: unknown) {
-    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
-      return (
-        error.response?.data?.erro ||
-        error.response?.data?.message ||
-        error.message
-      );
-    }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    return "Ocorreu um problema ao criar a conta";
+    return apiErrorMessage(error, "Não foi possível criar a conta.");
   }
 
   function formatarDataParaApi(data: string) {
@@ -115,8 +104,6 @@ export default function Register() {
         fk_idtipo: ID_TIPO_USUARIO_PADRAO,
       });
 
-      console.log("RESPOSTA DO BACKEND:", res.data);
-
       if (res.data.success === false || !res.data.data) {
         throw new Error(
           res.data.message || "Nao foi possivel criar a conta."
@@ -124,7 +111,7 @@ export default function Register() {
       }
 
       return {
-        ...res.data.data,
+        ...Object.fromEntries(Object.entries(res.data.data).filter(([key]) => key !== "senha")) as Usuario,
         fk_idtipo: ID_TIPO_USUARIO_PADRAO,
       };
 
@@ -259,7 +246,11 @@ export default function Register() {
 
   async function onClickRegistrar(): Promise<void> {
 
+    if (loading) return;
     if (!isFormComplete) {
+      setModalTitle("Campos obrigatórios");
+      setModalMessage("Preencha todos os campos para continuar.");
+      setModalErrorVisible(true);
       return;
     }
 
@@ -352,13 +343,15 @@ export default function Register() {
 
     try {
 
+      setLoading(true);
       const usuario = await criarConta();
+      await clearSession();
 
       await AsyncStorage.setItem(
         "usuario",
         JSON.stringify(usuario)
       );
-      await AsyncStorage.setItem("senhaCadastro", password);
+
 
       setModalEmoji("🐾");
 
@@ -385,6 +378,8 @@ export default function Register() {
       );
 
       setModalErrorVisible(true);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -492,6 +487,9 @@ export default function Register() {
               style={styles.input}
               placeholder="E-mail"
               onChangeText={setLogin}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
               value={login}
             />
           </View>
@@ -542,7 +540,6 @@ export default function Register() {
                 onChangeText={setPassword}
                 value={password}
                 secureTextEntry={!showPassword}
-                maxLength={8}
               />
 
               <TouchableOpacity
@@ -575,7 +572,6 @@ export default function Register() {
                 onChangeText={setPassword2}
                 value={password2}
                 secureTextEntry={!showConfirmPassword}
-                maxLength={8}
               />
 
               <TouchableOpacity
@@ -605,9 +601,10 @@ export default function Register() {
               },
             ]}
             onPress={onClickRegistrar}
+            disabled={loading || modalVisible}
           >
             <Text style={styles.buttonText}>
-              Continuar
+              {loading ? "Criando conta..." : "Continuar"}
             </Text>
           </TouchableOpacity>
 

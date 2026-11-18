@@ -1,3 +1,6 @@
+import { useAdoptionRefresh } from '../hooks/useAdoptionRefresh';
+import api from '../src/service/api';
+import { getStatusConfig, normalizarSolicitacaoAdocao } from '../src/utils/adocao';
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
@@ -14,7 +17,7 @@ import {
 
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Redirect, useRouter, useLocalSearchParams } from 'expo-router';
 
 export default function AdoptionDetails() {
   const router = useRouter();
@@ -24,183 +27,18 @@ export default function AdoptionDetails() {
   const { theme } = useThemeContext();
   const isDark = theme === 'dark';
 
-  // MOCK API COM 3 PETS
-  const [adoptions] = useState([
-    {
-      id: '1',
-
-      petName: 'Luke',
-      age: '2 anos',
-      ong: 'ONG Paz e Amor',
-      image: require('@/assets/images/cachorro01.jpg'),
-
-      currentStatus: 'Em análise',
-
-      estimatedTime: '2 a 5 dias úteis',
-
-      updates: [
-        {
-          id: 1,
-          title: 'Seu perfil entrou em análise',
-          date: 'Hoje',
-        },
-        {
-          id: 2,
-          title: 'Solicitação enviada com sucesso',
-          date: 'Ontem',
-        },
-      ],
-
-      messages: [
-        {
-          id: 1,
-          from: 'ONG Paz e Amor',
-          message:
-            'Olá Lucas ❤️ Gostaríamos de conversar com você amanhã.',
-          time: 'há 2 horas',
-        },
-      ],
-
-      checklist: [
-        {
-          id: 1,
-          title: 'Entrevista realizada',
-          done: false,
-        },
-        {
-          id: 2,
-          title: 'Visita concluída',
-          done: false,
-        },
-        {
-          id: 3,
-          title: 'Documentação enviada',
-          done: true,
-        },
-      ],
-    },
-
-    {
-      id: '2',
-
-      petName: 'Mia',
-      age: '1 ano',
-      ong: 'ONG Amigos de Patas',
-      image: require('@/assets/images/gato01.jpg'),
-
-      currentStatus: 'Entrevista agendada',
-
-      estimatedTime: '1 a 3 dias úteis',
-
-      updates: [
-        {
-          id: 1,
-          title: 'Entrevista marcada para amanhã',
-          date: 'Hoje',
-        },
-        {
-          id: 2,
-          title: 'Seu perfil foi aprovado',
-          date: 'Ontem',
-        },
-      ],
-
-      messages: [
-        {
-          id: 1,
-          from: 'ONG Amigos de Patas',
-          message:
-            'Estamos ansiosos para conversar com você 🐱❤️',
-          time: 'há 1 hora',
-        },
-      ],
-
-      checklist: [
-        {
-          id: 1,
-          title: 'Entrevista realizada',
-          done: false,
-        },
-        {
-          id: 2,
-          title: 'Visita concluída',
-          done: false,
-        },
-        {
-          id: 3,
-          title: 'Documentação enviada',
-          done: true,
-        },
-      ],
-    },
-
-    {
-      id: '3',
-
-      petName: 'Thor',
-      age: '3 anos',
-      ong: 'ONG Vida Animal',
-      image: require('@/assets/images/cachorro02.jpg'),
-
-      currentStatus: 'Aprovado',
-
-      estimatedTime: 'Processo concluído ❤️',
-
-      updates: [
-        {
-          id: 1,
-          title: 'Sua adoção foi aprovada',
-          date: 'Hoje',
-        },
-        {
-          id: 2,
-          title: 'Visita concluída com sucesso',
-          date: 'Ontem',
-        },
-      ],
-
-      messages: [
-        {
-          id: 1,
-          from: 'ONG Vida Animal',
-          message:
-            'Parabéns ❤️ O Thor agora faz parte da sua família.',
-          time: 'Agora',
-        },
-      ],
-
-      checklist: [
-        {
-          id: 1,
-          title: 'Entrevista realizada',
-          done: true,
-        },
-        {
-          id: 2,
-          title: 'Visita concluída',
-          done: true,
-        },
-        {
-          id: 3,
-          title: 'Documentação enviada',
-          done: true,
-        },
-      ],
-    },
-  ]);
-
   const getParam = (value: string | string[] | undefined) =>
     Array.isArray(value) ? value[0] : value;
 
   const adoptionFromParams = {
-    id: String(getParam(params.petName) || 'api'),
+    id: String(getParam(params.idSolicitacao) || getParam(params.id) || ''),
     petName: getParam(params.petName) || 'Pet',
     age: getParam(params.idade) || 'Idade nao informada',
     ong: getParam(params.ong) || 'ONG nao informada',
     image: getParam(params.imageUri)
       ? { uri: getParam(params.imageUri) }
-      : require('@/assets/images/cachorro01.jpg'),
-    currentStatus: getParam(params.status) || 'Solicitacao enviada',
+      : require('@/assets/images/LogoPataAzul.png'),
+    currentStatus: 'Atualizando status...',
     estimatedTime: '2 a 5 dias uteis',
     updates: [
       {
@@ -209,7 +47,7 @@ export default function AdoptionDetails() {
         date: getParam(params.date) || 'Hoje',
       },
     ],
-    messages: [],
+    messages: [] as { id: number; from: string; message: string; time: string }[],
     checklist: [
       {
         id: 1,
@@ -230,60 +68,24 @@ export default function AdoptionDetails() {
   };
 
   // PEGA O PET SELECIONADO
-  const adoption =
-    adoptions.find(
-      (item) => item.petName === params.petName
-    ) || adoptionFromParams;
-
-  // STATUS CONFIG
-  const statusConfig: any = {
-    'Solicitação enviada': {
-      color: '#3B82F6',
-      bg: '#DBEAFE',
-      icon: 'paper-plane-outline',
-    },
-
-    'Em análise': {
-      color: '#F7B500',
-      bg: '#FFF6D8',
-      icon: 'time-outline',
-    },
-
-    'Entrevista agendada': {
-      color: '#8B5CF6',
-      bg: '#EFE7FF',
-      icon: 'chatbubble-ellipses-outline',
-    },
-
-    Aprovado: {
-      color: '#22C55E',
-      bg: '#DCFCE7',
-      icon: 'heart-outline',
-    },
-
-    'Não aprovado': {
-      color: '#EF4444',
-      bg: '#FEE2E2',
-      icon: 'close-circle-outline',
-    },
-  };
+  const [live, setLive] = useState<typeof adoptionFromParams | null>(null);
+  const requestId = adoptionFromParams.id;
+  useAdoptionRefresh(async isCurrent => {
+    if (!requestId) return;
+    const response = await api.get('/solicitacoesadocao/' + requestId);
+    const data = Array.isArray(response.data) ? response.data[0] : response.data;
+    if (!data || !isCurrent()) return;
+    const item = normalizarSolicitacaoAdocao(data);
+    setLive({ ...adoptionFromParams, id: item.id, petName: item.petName, age: item.idade,
+      ong: item.ong, image: item.imageUri ? { uri: item.imageUri } : require('@/assets/images/LogoPataAzul.png'),
+      currentStatus: item.status, updates: [{ id: 1, title: 'Status atual: ' + item.status, date: '' }],
+    });
+  }, requestId);
+  const adoption = live?.id === requestId ? live : adoptionFromParams;
 
   // TIMELINE DINÂMICA
   const getTimelineSteps = () => {
-    let currentIndex = 0;
-    if (adoption.currentStatus === 'Em analise') currentIndex = 1;
-
-    if (adoption.currentStatus === 'Em análise')
-      currentIndex = 1;
-
-    if (
-      adoption.currentStatus ===
-      'Entrevista agendada'
-    )
-      currentIndex = 2;
-
-    if (adoption.currentStatus === 'Aprovado')
-      currentIndex = 4;
+    const currentIndex = getStatusConfig(adoption.currentStatus).step;
 
     const steps = [
       {
@@ -320,13 +122,14 @@ export default function AdoptionDetails() {
 
       {
         id: 5,
-        title: 'Finalização',
+        title: 'Aprovação',
         description:
           'Conclusão da adoção responsável ❤️',
         icon: 'heart-outline',
       },
     ];
 
+    steps.push({ id: 6, title: 'Entrega do pet', description: 'Adoção concluída.', icon: 'happy-outline' });
     return steps.map((step, index) => ({
       ...step,
       completed: index < currentIndex,
@@ -381,9 +184,8 @@ export default function AdoptionDetails() {
     ).start();
   }, []);
 
-  const currentStatus =
-    statusConfig[adoption.currentStatus] ||
-    statusConfig['SolicitaÃ§Ã£o enviada'];
+  const status = getStatusConfig(adoption.currentStatus);
+  const currentStatus = { color: status.statusColor, bg: status.statusBg, icon: status.icon as React.ComponentProps<typeof Ionicons>['name'] };
 
   const openWhatsApp = async () => {
     const url =
@@ -391,6 +193,8 @@ export default function AdoptionDetails() {
 
     Linking.openURL(url);
   };
+
+  if (!requestId) return <Redirect href="/acompanharAdocao" />;
 
   return (
     <SafeAreaView

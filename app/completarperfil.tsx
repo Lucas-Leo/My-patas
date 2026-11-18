@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import api from "../src/service/api";
-import axios from "axios";
+import { apiErrorMessage } from "../src/utils/apiError";
 import { useNavigation } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Picker } from '@react-native-picker/picker';
@@ -41,21 +41,11 @@ type UsuarioSalvo = Partial<Usuario> & {
   idusuario?: number;
 };
 
-type IdResponse = {
-  id?: number;
-  message?: string;
-};
-
-type EstadoApi = {
-  idestado: number;
-  sigla: string;
-  estado?: string;
-};
-
 export default function CompletarPerfil() {
 
   const navigation = useNavigation();
 
+  const [saving, setSaving] = useState(false);
   const [telefone, setTelefone] = useState<string>("");
   const [sexo, setSexo] = useState<string>("");
 
@@ -103,78 +93,9 @@ export default function CompletarPerfil() {
     } as Usuario;
   }
 
-  function obterMensagemErro(error: unknown) {
-    if (axios.isAxiosError<{ erro?: string; message?: string }>(error)) {
-      return (
-        error.response?.data?.erro ||
-        error.response?.data?.message ||
-        error.message
-      );
-    }
-
-    if (error instanceof Error) {
-      return error.message;
-    }
-
-    return "Nao foi possivel atualizar o perfil";
-  }
-
-  function extrairId(resposta: IdResponse, nomeEntidade: string) {
-    if (!resposta.id) {
-      throw new Error(`Nao foi possivel criar ${nomeEntidade}.`);
-    }
-
-    return resposta.id;
-  }
-
-  async function buscarIdEstado(sigla: string) {
-    const res = await api.get<EstadoApi[]>("/estados");
-    const estadoEncontrado = res.data.find(
-      (item) => item.sigla.toUpperCase() === sigla.trim().toUpperCase()
-    );
-
-    if (!estadoEncontrado) {
-      throw new Error("Estado nao encontrado na API.");
-    }
-
-    return estadoEncontrado.idestado;
-  }
-
-  async function criarEnderecoComDadosDoPerfil() {
-    const idEstado = await buscarIdEstado(estado);
-
-    const cidadeResponse = await api.post<IdResponse>("/cidades", {
-      cidade,
-      fk_idestado: idEstado,
-    });
-    const idCidade = extrairId(cidadeResponse.data, "a cidade");
-
-    const bairroResponse = await api.post<IdResponse>("/bairros", {
-      bairro,
-      fk_idcidade: idCidade,
-    });
-    const idBairro = extrairId(bairroResponse.data, "o bairro");
-
-    const ruaResponse = await api.post<IdResponse>("/ruas", {
-      rua,
-      fk_idbairro: idBairro,
-    });
-    const idRua = extrairId(ruaResponse.data, "a rua");
-
-    const enderecoResponse = await api.post<IdResponse>("/enderecos", {
-      fk_idcidade: idCidade,
-      fk_idbairro: idBairro,
-      fk_idrua: idRua,
-      fk_idestado: idEstado,
-      numero,
-      cep,
-      complemento,
-    });
-
-    return extrairId(enderecoResponse.data, "o endereco");
-  }
-
   async function atualizarPerfil() {
+    if (saving) return;
+    setSaving(true);
     try {
 
       const usuarioSalvo = await AsyncStorage.getItem("usuario");
@@ -198,50 +119,17 @@ export default function CompletarPerfil() {
       };
 
       const idSexo = sexoMap[sexo];
-      let fkIdEndereco = usuario.fk_idendereco;
-
-      const body = {
+      const response = await api.put('/usuarios/editar-comum/' + usuario.id, {
         nome: usuario.nome,
         telefone,
         fk_idsexo: idSexo,
-        estado,
-        cidade,
-        bairro,
-        rua,
-        numero,
-        cep,
-        complemento
-      };
-
-      console.log("ID:", usuario.id);
-      console.log("BODY:", body);
-
-      if (fkIdEndereco) {
-        await api.put(`/usuarios/usuario/endereco/${usuario.id}`, body);
-        await api.patch(`/usuarios/telefone/${usuario.id}`, {
-          telefone,
-        });
-      } else {
-        const senhaCadastro = await AsyncStorage.getItem("senhaCadastro");
-
-        if (!senhaCadastro) {
-          throw new Error("Senha do cadastro nao encontrada para concluir o perfil.");
-        }
-
-        fkIdEndereco = await criarEnderecoComDadosDoPerfil();
-
-        await api.put(`/usuarios/${usuario.id}`, {
-          nome: usuario.nome,
-          telefone,
-          fk_idsexo: idSexo,
-          senha: senhaCadastro,
-          foto: usuario.foto,
-          fk_idendereco: fkIdEndereco,
-          fk_idtipo: usuario.fk_idtipo,
-        });
-
-        await AsyncStorage.removeItem("senhaCadastro");
+        endereco: { estado, cidade, bairro, rua, numero, cep, complemento },
+      });
+      if (response.data?.success !== true || !response.data?.data?.fk_idendereco) {
+        throw new Error(response.data?.message || 'Não foi possível concluir o perfil.');
       }
+      const fkIdEndereco = response.data.data.fk_idendereco;
+      await AsyncStorage.removeItem('senhaCadastro');
 
       await AsyncStorage.setItem(
         "usuario",
@@ -265,12 +153,12 @@ export default function CompletarPerfil() {
       setModalVisible(true);
     } catch (error) {
 
-      console.log(obterMensagemErro(error));
-
       Alert.alert(
         "Erro",
-        "Não foi possível atualizar o perfil"
+        apiErrorMessage(error, "Não foi possível atualizar o perfil")
       );
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -292,7 +180,7 @@ export default function CompletarPerfil() {
       ]).start();
 
       setTimeout(() => {
-        navigation.navigate("home" as never);
+        navigation.navigate("login" as never);
       }, 2500);
     }
 
@@ -393,8 +281,7 @@ export default function CompletarPerfil() {
             </Text>
 
             <Text style={styles.modalText}>
-              Sua conta foi criada com sucesso.
-              Agora você já pode encontrar seu novo melhor amigo 🐶🐱
+              Sua conta foi criada com sucesso. Faça login para continuar.
             </Text>
 
           </Animated.View>
@@ -556,10 +443,11 @@ export default function CompletarPerfil() {
               },
             ]}
             onPress={onClickFinalizar}
+            disabled={saving || modalVisible}
           >
 
             <Text style={styles.buttonText}>
-              Finalizar cadastro
+              {saving ? "Salvando..." : "Finalizar cadastro"}
             </Text>
 
           </TouchableOpacity>

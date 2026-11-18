@@ -1,26 +1,27 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Image,
   ScrollView,
   TouchableOpacity,
   TextInput,
   Animated,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 
+import api from '../src/service/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  calcularIdadeUsuario,
+  etapa1Completa,
   AdoptionPet,
   Etapa1Adocao,
   getPetDisplayName,
@@ -29,7 +30,6 @@ import {
   stringifyParam,
 } from '../src/utils/adocao';
 
-const { width } = Dimensions.get('window');
 
 export default function ProcessoAdocao() {
   const router = useRouter();
@@ -53,10 +53,10 @@ export default function ProcessoAdocao() {
   const petImageUri = getPetImageUri(pet);
   const petImage = petImageUri
     ? { uri: petImageUri }
-    : require('@/assets/images/cachorro01.jpg');
+    : require('@/assets/images/LogoPataAzul.png');
 
   // ETAPAS
-  const [currentStep, setCurrentStep] = useState(1);
+  const currentStep = 1;
 
   // FORM
   const [formData, setFormData] = useState<Etapa1Adocao>({
@@ -90,27 +90,34 @@ export default function ProcessoAdocao() {
   }, []);
 
   useEffect(() => {
+    let active = true;
     async function carregarUsuario() {
-      const usuarioSalvo = await AsyncStorage.getItem('usuario');
-
-      if (!usuarioSalvo) return;
-
-      const usuario = JSON.parse(usuarioSalvo);
-      const cidade =
-        usuario?.endereco?.cidade ||
-        usuario?.cidade ||
-        '';
-
-      setFormData((prev) => ({
-        ...prev,
-        nome: prev.nome || usuario?.nome || '',
-        telefone: prev.telefone || usuario?.telefone || '',
-        cidade: prev.cidade || cidade,
-      }));
+      try {
+        const saved = await AsyncStorage.getItem('usuario');
+        if (!saved) return;
+        const local = JSON.parse(saved);
+        const apply = (user: typeof local) => {
+          if (!active) return;
+          setFormData(prev => ({ ...prev, nome: prev.nome || user.nome || '',
+            idade: calcularIdadeUsuario(user.data_nasc) || prev.idade,
+            telefone: prev.telefone || user.telefone || '',
+            cidade: prev.cidade || user.endereco?.cidade || user.cidade || '' }));
+        };
+        apply(local);
+        const id = local.id || local.idusuario;
+        if (id) {
+          const response = await api.get('/usuarios/perfil-comum/' + id);
+          if (response.data?.data) apply({ ...local, ...response.data.data });
+        }
+      } catch {
+        // Keep the editable form available if stored data or the network is unavailable.
+      }
     }
-
-    carregarUsuario();
+    void carregarUsuario();
+    return () => { active = false; };
   }, []);
+
+  const canContinue = etapa1Completa(formData);
 
   const handleSelect = (field: string, value: string) => {
     setFormData((prev) => ({
@@ -120,20 +127,8 @@ export default function ProcessoAdocao() {
   };
 
   const handleNext = () => {
-    if (
-      !formData.nome ||
-      !formData.idade ||
-      !formData.telefone ||
-      !formData.cidade ||
-      !formData.moradia ||
-      !formData.possuiAnimais ||
-      !formData.possuiCriancas
-    ) {
-      Alert.alert('Campos obrigatorios', 'Preencha todos os dados para continuar.');
-      return;
-    }
+    if (!canContinue) return;
 
-    setCurrentStep(2);
 
     // NAVEGA PARA A PRÓXIMA TELA
     router.push({
@@ -220,7 +215,7 @@ export default function ProcessoAdocao() {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Animated.View
           style={{
@@ -320,6 +315,8 @@ export default function ProcessoAdocao() {
           </View>
 
           <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
           >
@@ -686,7 +683,7 @@ export default function ProcessoAdocao() {
               </View>
             </View>
 
-            <View style={{ height: 120 }} />
+            <View style={{ height: 24 }} />
           </ScrollView>
 
           {/* BOTÃO FIXO */}
@@ -703,10 +700,12 @@ export default function ProcessoAdocao() {
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={handleNext}
+              disabled={!canContinue}
+              accessibilityState={{ disabled: !canContinue }}
               style={[
                 styles.nextButton,
                 {
-                  backgroundColor: isDark
+                  backgroundColor: !canContinue ? (isDark ? '#444' : '#C9CDD2') : isDark
                     ? '#FF80AB'
                     : '#FF2BAA',
                 },
@@ -752,7 +751,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 6,
     elevation: 3,
-    marginTop: 35,
+    marginTop: 8,
   },
 
   petInfo: {
@@ -918,8 +917,7 @@ const styles = StyleSheet.create({
   },
 
   bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
+    flexShrink: 0,
     width: '100%',
     paddingHorizontal: 20,
     paddingTop: 12,

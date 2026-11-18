@@ -1,10 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Image,
   ScrollView,
   TouchableOpacity,
@@ -13,13 +13,13 @@ import {
   KeyboardAvoidingView,
   Platform,
   Modal,
-  Alert,
 } from 'react-native';
 
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
+  etapa2Completa,
   AdoptionPet,
   Etapa1Adocao,
   Etapa2Adocao,
@@ -59,7 +59,7 @@ export default function AdocaoEtapa2() {
   const petImageUri = getPetImageUri(pet);
   const petImage = petImageUri
     ? { uri: petImageUri }
-    : require('@/assets/images/cachorro01.jpg');
+    : require('@/assets/images/LogoPataAzul.png');
 
   const [formData, setFormData] = useState<Etapa2Adocao>({
     motivacao: '',
@@ -113,18 +113,9 @@ export default function AdocaoEtapa2() {
     }));
   };
 
+  const canContinue = etapa2Completa(formData);
   const handleContinue = () => {
-    if (
-      !formData.motivacao ||
-      !formData.experiencia ||
-      !formData.apoioFamilia ||
-      !formData.rotina ||
-      !formData.financeiro ||
-      !formData.ambiente
-    ) {
-      Alert.alert('Campos obrigatorios', 'Responda todo o questionario para continuar.');
-      return;
-    }
+    if (!canContinue || showFeedbackModal) return;
 
     setShowFeedbackModal(true);
 
@@ -244,7 +235,7 @@ export default function AdocaoEtapa2() {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <Animated.View
           style={{
@@ -356,6 +347,8 @@ export default function AdocaoEtapa2() {
           </View>
 
           <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
           >
@@ -723,7 +716,7 @@ export default function AdocaoEtapa2() {
               </View>
             </View>
 
-            <View style={{ height: 140 }} />
+            <View style={{ height: 24 }} />
           </ScrollView>
 
           {/* BOTÃO */}
@@ -740,10 +733,12 @@ export default function AdocaoEtapa2() {
             <TouchableOpacity
               activeOpacity={0.9}
               onPress={handleContinue}
+              disabled={!canContinue || showFeedbackModal}
+              accessibilityState={{ disabled: !canContinue || showFeedbackModal }}
               style={[
                 styles.continueButton,
                 {
-                  backgroundColor: isDark
+                  backgroundColor: !canContinue ? (isDark ? '#444' : '#C9CDD2') : isDark
                     ? '#FF80AB'
                     : '#FF2BAA',
                 },
@@ -856,7 +851,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
 
-    marginTop: 35,
+    marginTop: 8,
   },
 
   petInfo: {
@@ -1016,8 +1011,7 @@ const styles = StyleSheet.create({
   },
 
   bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
+    flexShrink: 0,
     width: '100%',
 
     paddingHorizontal: 20,

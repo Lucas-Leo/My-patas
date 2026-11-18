@@ -29,6 +29,7 @@ export async function clearSession() {
     "token",
     "ong",
     "activeProfile",
+    "senhaCadastro",
     "fotoPerfil",
     "fotoPerfilONG",
   ]);

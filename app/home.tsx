@@ -1,3 +1,4 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -5,7 +6,6 @@ import {
   Image,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Dimensions,
   Animated,
   PanResponder,
@@ -37,6 +37,7 @@ export default function SwipeScreen() {
   const [pets, setPets] = useState<PetApp[]>([]);
   const [selectedPet, setSelectedPet] = useState<PetApp | null>(null);
   const [loading, setLoading] = useState(true);
+  const actionInFlight = useRef(false);
   const [savingLike, setSavingLike] = useState(false);
   
   // Estado para controlar a exibição do Modal de Passos para Adoção
@@ -65,6 +66,8 @@ export default function SwipeScreen() {
       const petsBanco = Array.isArray(petsResponse.data)
         ? petsResponse.data.map((pet: ApiPet) => normalizarPet(pet)).filter((pet: PetApp) => Number.isFinite(pet.id))
         : [];
+
+      setPets(petsBanco);
 
       const idUsuario = await obterIdUsuarioLogado();
 
@@ -116,7 +119,8 @@ export default function SwipeScreen() {
   };
 
   const handleLike = async () => {
-    if (!currentPet || savingLike) return;
+    if (!currentPet || actionInFlight.current) return;
+    actionInFlight.current = true;
 
     try {
       setSavingLike(true);
@@ -125,34 +129,47 @@ export default function SwipeScreen() {
 
       if (!idUsuario) {
         Alert.alert('Login necessario', 'Entre na sua conta para favoritar pets.');
+        resetPosition();
         return;
       }
 
-      await api.post('/petsfavoritados', {
+      const response = await api.post('/petsfavoritados', {
         fk_idusuario: idUsuario,
         fk_idpet: currentPet.id,
       });
 
+      if (response.data?.success === false || !response.data?.id) throw new Error('Falha ao favoritar.');
       triggerLikeAnimation();
-      Animated.timing(position, {
+      await new Promise<void>(resolve => Animated.timing(position, {
         toValue: { x: width, y: 0 },
         duration: 300,
         useNativeDriver: true,
-      }).start(removeTopCard);
+      }).start(({ finished }) => {
+        if (finished) removeTopCard();
+        resolve();
+      }));
     } catch (error) {
       Alert.alert('Erro', 'Nao foi possivel favoritar este pet.');
       resetPosition();
     } finally {
+      actionInFlight.current = false;
       setSavingLike(false);
     }
   };
 
   const handleSkip = () => {
+    if (!currentPet || actionInFlight.current) return;
+    actionInFlight.current = true;
+    setSavingLike(true);
     Animated.timing(position, {
       toValue: { x: -width, y: 0 },
       duration: 300,
       useNativeDriver: true,
-    }).start(removeTopCard);
+    }).start(({ finished }) => {
+      if (finished) removeTopCard();
+      actionInFlight.current = false;
+      setSavingLike(false);
+    });
   };
 
   const resetPosition = () => {
@@ -262,7 +279,8 @@ export default function SwipeScreen() {
   });
 
   const panResponder = PanResponder.create({
-    onMoveShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gesture) => !actionInFlight.current && Math.abs(gesture.dx) > 12 && Math.abs(gesture.dx) > Math.abs(gesture.dy),
+    onPanResponderTerminate: () => resetPosition(),
     onPanResponderMove: (_, gesture) => {
       position.setValue({ x: gesture.dx, y: gesture.dy });
     },
@@ -312,6 +330,7 @@ export default function SwipeScreen() {
             <Animated.View
               {...panResponder.panHandlers}
               style={{
+                flex: 1, minHeight: 0, width: '90%', maxWidth: 480,
                 transform: [
                   { translateX: position.x },
                   { translateY: position.y },
@@ -319,7 +338,7 @@ export default function SwipeScreen() {
                 ],
               }}
             >
-              <TouchableOpacity activeOpacity={0.9} onPress={() => openSheet(currentPet)}>
+              <TouchableOpacity style={{ flex: 1 }} activeOpacity={0.9} onPress={() => openSheet(currentPet)}>
                 <View style={[styles.cardContainer, { backgroundColor: isDark ? '#1F1F1F' : '#fff' }]}>
                   <Image source={petImageSource(currentPet)} style={styles.petImage} />
 
@@ -339,11 +358,11 @@ export default function SwipeScreen() {
             </Animated.View>
 
             <View style={styles.actionButtons}>
-              <TouchableOpacity style={[styles.button, styles.skipButton]} onPress={handleSkip}>
+              <TouchableOpacity style={[styles.button, styles.skipButton]} onPress={handleSkip} disabled={savingLike} accessibilityRole="button" accessibilityLabel="Não tenho interesse neste pet">
                 <AntDesign name="close" size={32} color="white" />
               </TouchableOpacity>
 
-              <TouchableOpacity style={[styles.button, styles.likeButton]} onPress={handleLike}>
+              <TouchableOpacity style={[styles.button, styles.likeButton]} onPress={handleLike} disabled={savingLike} accessibilityRole="button" accessibilityLabel="Curtir este pet">
                 <AntDesign name="heart" size={32} color="white" />
               </TouchableOpacity>
             </View>
@@ -550,29 +569,31 @@ export default function SwipeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    marginTop: 45
+    minHeight: 0
   },
 
   header: {
     alignItems: 'center',
-    paddingVertical: 30,
-    marginTop: 20
+    paddingVertical: 8
   },
 
   logo: {
-    width: 200,
-    height: 90
+    width: 150,
+    height: 60
   },
 
   mainContent: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    minHeight: 0,
+    paddingVertical: 8,
   },
 
   cardContainer: {
-    width: width * 0.9,
-    height: width * 1.2,
+    width: '100%',
+    flex: 1,
+    minHeight: 0,
     borderRadius: 15,
     overflow: 'hidden'
   },
@@ -598,14 +619,16 @@ const styles = StyleSheet.create({
 
   actionButtons: {
     flexDirection: 'row',
-    marginTop: 20,
+    marginTop: 12,
+    marginBottom: 8,
+    flexShrink: 0,
     width: width * 0.6,
     justifyContent: 'space-around'
   },
 
   button: {
-    width: 70,
-    height: 70,
+    width: 60,
+    height: 60,
     borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center'

@@ -1,3 +1,4 @@
+import { useAdoptionRefresh } from '../hooks/useAdoptionRefresh';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -96,13 +97,8 @@ export default function SolicitacoesONG() {
   }
 
   function obterIndiceEtapa(status: string) {
-    const texto = normalizarTexto(status);
-
-    if (texto.includes('entrevista')) return 2;
-    if (texto.includes('aprovad') || texto.includes('reprov') || texto.includes('entregue')) return 3;
-    if (texto.includes('analise')) return 1;
-
-    return 0;
+    const step = getStatusConfig(status).step;
+    return step < 0 ? -1 : step >= 4 ? 3 : Math.min(step, 2);
   }
 
   function normalizarSolicitacaoOng(item: ApiSolicitacaoOng): Solicitation {
@@ -141,31 +137,16 @@ export default function SolicitacoesONG() {
     ]).start();
   }, []);
 
-  // FILTRAGEM DINÂMICA
-  useEffect(() => {
-    async function carregarSolicitacoes() {
-      try {
-        setLoading(true);
-
-        const idOng = await obterIdOngLogada();
-
-        if (!idOng) {
-          setSolicitations([]);
-          return;
-        }
-
-        const response = await api.get(`/solicitacoesadocao/ong/${idOng}`);
-        const data = Array.isArray(response.data) ? response.data : [];
-        setSolicitations(data.map((item: ApiSolicitacaoOng) => normalizarSolicitacaoOng(item)));
-      } catch {
-        setSolicitations([]);
-      } finally {
-        setLoading(false);
+  useAdoptionRefresh(async isCurrent => {
+    try {
+      const idOng = await obterIdOngLogada();
+      if (!idOng) { if (isCurrent()) setSolicitations([]); return; }
+      const response = await api.get('/solicitacoesadocao/ong/' + idOng);
+      if (Array.isArray(response.data) && isCurrent()) {
+        setSolicitations(response.data.map((item: ApiSolicitacaoOng) => normalizarSolicitacaoOng(item)));
       }
-    }
-
-    carregarSolicitacoes();
-  }, []);
+    } finally { if (isCurrent()) setLoading(false); }
+  });
 
   const filteredSolicitations = solicitations.filter((item) => {
     const matchesSearch =
@@ -176,6 +157,9 @@ export default function SolicitacoesONG() {
     const filtroNormalizado = normalizarTexto(selectedFilter);
     const matchesFilter =
       selectedFilter === 'Todas' ||
+      (selectedFilter === 'Nova' && getStatusConfig(item.status).step === 0) ||
+      (selectedFilter === 'Reprovadas' && getStatusConfig(item.status).step === -1) ||
+      (selectedFilter === 'Finalizadas' && getStatusConfig(item.status).step === 5) ||
       statusNormalizado.includes(filtroNormalizado.replace(/s$/, '')) ||
       filtroNormalizado.includes(statusNormalizado);
 

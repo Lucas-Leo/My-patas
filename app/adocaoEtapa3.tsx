@@ -1,10 +1,10 @@
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useEffect, useRef, useState } from 'react';
 
 import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Image,
   ScrollView,
   TouchableOpacity,
@@ -20,7 +20,9 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import api from '../src/service/api';
+import { submitAdoption, AdoptionAlreadySentError } from '../src/service/adoption';
+import { apiErrorMessage } from '../src/utils/apiError';
+import FeedbackModal from '../components/FeedbackModal';
 import {
   AdoptionPet,
   Etapa1Adocao,
@@ -78,41 +80,21 @@ export default function AdocaoEtapa3() {
   const petImageUri = getPetImageUri(pet);
   const petImage = petImageUri
     ? { uri: petImageUri }
-    : require('@/assets/images/cachorro01.jpg');
+    : require('@/assets/images/LogoPataAzul.png');
 
-  // ESTADOS EDITÁVEIS
-  const [etapa1, setEtapa1] = useState({
-    nome: 'Lucas Leonardo',
-    cidade: 'Matão - SP',
-    moradia: 'Casa com quintal',
-    animais: 'Sim',
-    criancas: 'Não',
-  });
-
-  const [etapa2, setEtapa2] = useState({
-    motivacao: 'Dar um lar ❤️',
-    experiencia: 'Já teve pets',
-    rotina: 'Fica poucas horas sozinho',
-    financeiro: 'Sim',
-  });
-
-  // MODAIS DE EDIÇÃO
-  useEffect(() => {
-    setEtapa1({
-      nome: etapa1Recebida.nome,
-      cidade: etapa1Recebida.cidade,
-      moradia: formatarResposta(etapa1Recebida.moradia),
-      animais: formatarSimNao(etapa1Recebida.possuiAnimais),
-      criancas: formatarSimNao(etapa1Recebida.possuiCriancas),
-    });
-
-    setEtapa2({
-      motivacao: montarMotivacao(etapa2Recebida),
-      experiencia: montarExperiencia(etapa2Recebida),
-      rotina: formatarResposta(etapa2Recebida.rotina),
-      financeiro: formatarResposta(etapa2Recebida.financeiro),
-    });
-  }, []);
+  const [etapa1, setEtapa1] = useState(() => ({
+    nome: etapa1Recebida.nome,
+    cidade: etapa1Recebida.cidade,
+    moradia: formatarResposta(etapa1Recebida.moradia),
+    animais: formatarSimNao(etapa1Recebida.possuiAnimais),
+    criancas: formatarSimNao(etapa1Recebida.possuiCriancas),
+  }));
+  const [etapa2, setEtapa2] = useState(() => ({
+    motivacao: montarMotivacao(etapa2Recebida),
+    experiencia: montarExperiencia(etapa2Recebida),
+    rotina: formatarResposta(etapa2Recebida.rotina),
+    financeiro: formatarResposta(etapa2Recebida.financeiro),
+  }));
 
   const [showEditDadosModal, setShowEditDadosModal] =
     useState(false);
@@ -120,6 +102,8 @@ export default function AdocaoEtapa3() {
   const [showEditPerfilModal, setShowEditPerfilModal] =
     useState(false);
 
+  const submitting = useRef(false);
+  const [feedback, setFeedback] = useState<{title: string; message: string} | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -176,7 +160,8 @@ export default function AdocaoEtapa3() {
   };
 
   const handleSubmit = async () => {
-    if (!accepted || loading) return;
+    if (!accepted || loading || submitting.current || showSuccessModal) return;
+    submitting.current = true;
 
     animateButton();
 
@@ -197,22 +182,9 @@ export default function AdocaoEtapa3() {
         return;
       }
 
-      const solicitacaoResponse = await api.post('/solicitacoesadocao', {
-        fk_idpet: pet.id,
-        fk_idusuario: idUsuario,
-        status: 'Solicitacao enviada',
-      });
-
-      const idSolicitacao =
-        solicitacaoResponse.data?.id ||
-        solicitacaoResponse.data?.idsolicitacao;
-
-      if (!idSolicitacao) {
-        throw new Error('A API nao retornou o id da solicitacao.');
-      }
-
-      await api.post('/adocaoetapa1', {
-        fk_idsolicitacao: idSolicitacao,
+      const idSolicitacao = await submitAdoption({
+        petId: Number(pet.id), userId: Number(idUsuario),
+        etapa1: {
         nome: etapa1.nome,
         idade: etapa1Recebida.idade,
         telefone: etapa1Recebida.telefone,
@@ -220,16 +192,15 @@ export default function AdocaoEtapa3() {
         moradia: etapa1.moradia,
         possui_animais: etapa1.animais,
         possui_criancas: etapa1.criancas,
-      });
-
-      await api.post('/adocaoetapa2', {
-        fk_idsolicitacao: idSolicitacao,
+        },
+        etapa2: {
         motivacao: etapa2.motivacao,
         experiencia: etapa2.experiencia,
         apoio_familia: formatarResposta(etapa2Recebida.apoioFamilia),
         rotina: etapa2.rotina,
         financeiro: etapa2.financeiro,
         ambiente: formatarResposta(etapa2Recebida.ambiente),
+        },
       });
 
       setLoading(false);
@@ -265,7 +236,13 @@ export default function AdocaoEtapa3() {
       }, 2400);
     } catch (error) {
       setLoading(false);
-      Alert.alert('Erro', 'Nao foi possivel enviar sua solicitacao de adocao.');
+      setFeedback({
+        title: error instanceof AdoptionAlreadySentError ? 'Solicitação já enviada' : 'Não foi possível enviar',
+        message: apiErrorMessage(error, 'Não foi possível enviar sua solicitação. Tente novamente.'),
+      });
+    } finally {
+      submitting.current = false;
+      setLoading(false);
     }
   };
 
@@ -447,6 +424,8 @@ export default function AdocaoEtapa3() {
           </View>
 
           <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.scroll}
           >
@@ -799,7 +778,7 @@ export default function AdocaoEtapa3() {
               <TouchableOpacity
                 activeOpacity={0.9}
                 onPress={handleSubmit}
-                disabled={!accepted || loading}
+                disabled={!accepted || loading || showSuccessModal}
                 style={[
                   styles.submitButton,
                   {
@@ -873,6 +852,8 @@ export default function AdocaoEtapa3() {
                 </Text>
 
                 <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
                   showsVerticalScrollIndicator={false}
                 >
                   <TextInput
@@ -1082,6 +1063,8 @@ export default function AdocaoEtapa3() {
                 </Text>
 
                 <ScrollView
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
                   showsVerticalScrollIndicator={false}
                 >
                   <TextInput
@@ -1299,6 +1282,7 @@ export default function AdocaoEtapa3() {
           </Modal>
         </Animated.View>
       </KeyboardAvoidingView>
+      <FeedbackModal visible={!!feedback} title={feedback?.title || ""} message={feedback?.message || ""} onClose={() => setFeedback(null)} isDark={isDark} />
     </SafeAreaView>
   );
 }
@@ -1328,7 +1312,7 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
 
-    marginTop: 35,
+    marginTop: 8,
   },
 
   petInfo: {
@@ -1528,8 +1512,7 @@ const styles = StyleSheet.create({
   },
 
   bottomContainer: {
-    position: 'absolute',
-    bottom: 0,
+    flexShrink: 0,
     width: '100%',
 
     paddingHorizontal: 20,

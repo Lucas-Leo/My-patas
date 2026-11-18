@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useAdoptionRefresh } from '../hooks/useAdoptionRefresh';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -15,15 +16,15 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 import api from '../src/service/api';
 import {
+  getStatusConfig,
   ApiSolicitacaoAdocao,
   normalizarSolicitacaoAdocao,
 } from '../src/utils/adocao';
 import { obterIdUsuarioLogado } from '../src/utils/pets';
 
-const fallbackPetImage = require('@/assets/images/cachorro01.jpg');
+const fallbackPetImage = require('@/assets/images/LogoPataAzul.png');
 
 export default function MyAdoptions() {
   const router = useRouter();
@@ -39,11 +40,7 @@ export default function MyAdoptions() {
   // TIMELINE DINÂMICA
   const getAdoptionSteps = (currentStatus: string) => {
     // Definimos a hierarquia de status para saber até qual passo preencher
-    let currentIndex = 0;
-    if (currentStatus === 'Em analise') currentIndex = 1;
-    if (currentStatus === 'Em análise') currentIndex = 1;
-    if (currentStatus === 'Entrevista agendada') currentIndex = 2;
-    if (currentStatus === 'Aprovado') currentIndex = 3;
+    const currentIndex = getStatusConfig(currentStatus).step;
 
     const steps = [
       {
@@ -65,11 +62,15 @@ export default function MyAdoptions() {
         icon: 'chatbubble-ellipses-outline',
       },
       {
-        id: 4,
-        title: 'Resultado final',
-        description: 'Resultado da avaliação da adoção.',
+        id: 4, title: 'Visita / documentos', description: 'Etapa de visita e documentação.', icon: 'home-outline',
+      },
+      {
+        id: 5,
+        title: 'Aprovação',
+        description: currentIndex < 0 ? currentStatus : 'Resultado da avaliação da adoção.',
         icon: 'heart-outline',
       },
+      { id: 6, title: 'Entrega do pet', description: 'Adoção concluída.', icon: 'happy-outline' },
     ];
 
     // Mapeia os passos definindo se estão completos baseados no index do status atual
@@ -101,45 +102,23 @@ export default function MyAdoptions() {
     ]).start();
   }, []);
 
-  useFocusEffect(
-    useCallback(() => {
-      async function carregarAdocoes() {
-        try {
-          setLoading(true);
-
-          const idUsuario = await obterIdUsuarioLogado();
-
-          if (!idUsuario) {
-            setAdoptions([]);
-            return;
-          }
-
-          const response = await api.get(`/solicitacoesadocao/usuario/${idUsuario}`);
-          const adocoes = Array.isArray(response.data)
-            ? response.data.map((item: ApiSolicitacaoAdocao) => {
-                const normalizada = normalizarSolicitacaoAdocao(item);
-
-                return {
-                  ...normalizada,
-                  image: normalizada.imageUri
-                    ? { uri: normalizada.imageUri }
-                    : fallbackPetImage,
-                };
-              })
-            : [];
-
-          setAdoptions(adocoes);
-        } catch (error) {
-          setAdoptions([]);
-          Alert.alert('Erro', 'Nao foi possivel carregar suas adocoes.');
-        } finally {
-          setLoading(false);
-        }
-      }
-
-      carregarAdocoes();
-    }, [])
-  );
+  useAdoptionRefresh(async isCurrent => {
+    try {
+      const idUsuario = await obterIdUsuarioLogado();
+      if (!idUsuario) { if (isCurrent()) { setAdoptions([]); setSelectedAdoption(null); } return; }
+      const response = await api.get('/solicitacoesadocao/usuario/' + idUsuario);
+      if (!Array.isArray(response.data)) throw new Error('Resposta inválida');
+      const items = response.data.map((item: ApiSolicitacaoAdocao) => {
+        const normalized = normalizarSolicitacaoAdocao(item);
+        return { ...normalized, image: normalized.imageUri ? { uri: normalized.imageUri } : fallbackPetImage };
+      });
+      if (!isCurrent()) return;
+      setAdoptions(items);
+      setSelectedAdoption((previous: any) => previous ? items.find(item => item.id === previous.id) || null : null);
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
+  });
 
   const animateCard = () => {
     Animated.sequence([
@@ -159,9 +138,7 @@ export default function MyAdoptions() {
     animateCard();
     setSelectedAdoption(item);
 
-    setTimeout(() => {
-      setShowDetailsModal(true);
-    }, 120);
+    setShowDetailsModal(true);
   };
 
   const renderStatus = (
@@ -322,7 +299,7 @@ export default function MyAdoptions() {
                   },
                 ]}
               >
-                Processo acompanhado pela ONG
+                {getStatusConfig(item.status).step < 0 ? 'Processo encerrado' : `Etapa ${getStatusConfig(item.status).step + 1} de 6 · ${item.status}`}
               </Text>
             </View>
 
@@ -435,7 +412,7 @@ export default function MyAdoptions() {
         <View style={styles.header}>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/adocaoSucesso')}
+            onPress={() => router.replace('/perfil')}
             style={[
               styles.backButton,
               {
@@ -492,7 +469,7 @@ export default function MyAdoptions() {
       </Animated.View>
 
       {/* MODAL DETALHES */}
-      <Modal visible={showDetailsModal} transparent animationType="fade">
+      <Modal visible={showDetailsModal && !!selectedAdoption} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View
             style={[

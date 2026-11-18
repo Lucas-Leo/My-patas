@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import { useAdoptionRefresh } from '../hooks/useAdoptionRefresh';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +21,7 @@ import {
 } from 'expo-router';
 import { ComponentProps } from 'react';
 import api from '../src/service/api';
-import { formatarDataAdocao, formatarResposta } from '../src/utils/adocao';
+import { getStatusConfig, formatarDataAdocao, formatarResposta } from '../src/utils/adocao';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -39,9 +40,7 @@ export default function DetalhesSolicitacaoONG() {
   const [observacao, setObservacao] = useState('');
   const [modalStatusVisivel, setModalStatusVisivel] = useState(false);
 
-  useEffect(() => {
-    carregarSolicitacao();
-  }, []);
+  useAdoptionRefresh(isCurrent => carregarSolicitacao(isCurrent), String(id));
 
   function valorResposta(valor?: string | number | null) {
     if (valor === undefined || valor === null || valor === '') {
@@ -121,7 +120,7 @@ export default function DetalhesSolicitacaoONG() {
     );
   }
 
-  async function carregarSolicitacao() {
+  async function carregarSolicitacao(isCurrent = () => true) {
     try {
       const response = await api.get(`/solicitacoesadocao/${id}`);
       const data = Array.isArray(response.data) ? response.data[0] : response.data;
@@ -130,49 +129,20 @@ export default function DetalhesSolicitacaoONG() {
         throw new Error('Solicitacao nao encontrada.');
       }
 
-      setSolicitacao(montarSolicitacao(data));
+      if (isCurrent()) setSolicitacao(montarSolicitacao(data));
     } catch {
-      Alert.alert('Erro', 'Nao foi possivel carregar a solicitacao.');
+      // Preserve the last confirmed status and retry automatically.
     }
   }
 
-  const statusConfig: { [key: string]: { label: string; color: string; bg: string; icon: IconName } } = {
-    'Solicitacao enviada': { label: 'Solicitacao enviada', color: '#3B82F6', bg: '#DBEAFE', icon: 'paper-plane-outline' },
-    'Nova': { label: 'Nova solicitacao', color: '#3B82F6', bg: '#DBEAFE', icon: 'sparkles-outline' },
-    'Em analise': { label: 'Solicitacao em analise', color: '#F7B500', bg: '#FFF6D8', icon: 'time-outline' },
-    'Entrevista agendada': { label: 'Entrevista agendada', color: '#8B5CF6', bg: '#EFE7FF', icon: 'calendar-outline' },
-    'Nao aprovado': { label: 'Nao aprovado', color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
-    'Em análise': { label: 'Solicitação em análise', color: '#F7B500', bg: '#FFF6D8', icon: 'time-outline' },
-    'Entrevista': { label: 'Entrevista agendada', color: '#8B5CF6', bg: '#EFE7FF', icon: 'calendar-outline' },
-    'Visita': { label: 'Visita agendada', color: '#3B82F6', bg: '#EFF6FF', icon: 'home-outline' },
-    'Aprovado': { label: 'Aprovado', color: '#22C55E', bg: '#DCFCE7', icon: 'checkmark-circle-outline' },
-    'Entregue': { label: 'Pet entregue!', color: '#EC4899', bg: '#FCE7F3', icon: 'heart-outline' },
-    'Reprovado': { label: 'Reprovado', color: '#EF4444', bg: '#FEE2E2', icon: 'close-circle-outline' },
-  };
-
-  const fallbackStatus = statusConfig['Solicitacao enviada'];
-
-  function normalizarStatusKey(status: string) {
-    const texto = status
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase();
-
-    if (texto.includes('entrevista')) return 'Entrevista agendada';
-    if (texto.includes('visita')) return 'Visita';
-    if (texto.includes('entregue') || texto.includes('finaliz')) return 'Entregue';
-    if (texto.includes('aprovad') && !texto.includes('nao')) return 'Aprovado';
-    if (texto.includes('reprov') || texto.includes('nao aprovado')) return 'Reprovado';
-    if (texto.includes('analise')) return 'Em analise';
-    if (texto.includes('nova')) return 'Nova';
-    if (texto.includes('solicitacao')) return 'Solicitacao enviada';
-
-    return status;
-  }
-
   function obterStatusConfig(status: string) {
-    return statusConfig[normalizarStatusKey(status)] || fallbackStatus;
+    const config = getStatusConfig(status);
+    return { label: config.status, color: config.statusColor, bg: config.statusBg, icon: config.icon as IconName };
   }
+
+  const statusConfig = Object.fromEntries([
+    'Nova', 'Em análise', 'Entrevista', 'Visita', 'Aprovado', 'Reprovado', 'Finalizado',
+  ].map(status => [status, obterStatusConfig(status)]));
 
   const todasEtapas: { key: string; label: string; icon: IconName }[] = [
     { key: 'Solicitação enviada', label: 'Solicitação enviada', icon: 'paper-plane-outline' },
@@ -184,19 +154,13 @@ export default function DetalhesSolicitacaoONG() {
   ];
 
   const obterPassosTimeline = () => {
-    const statusAtual = solicitacao.status;
-    let indiceAtual = todasEtapas.findIndex(e => e.key === statusAtual);
-    if (statusAtual === 'Reprovado') indiceAtual = 1;
+    const indiceAtual = getStatusConfig(solicitacao.status).step;
 
     return todasEtapas.map((etapa, index) => ({
       ...etapa,
       completo: index <= indiceAtual,
-      ativo: etapa.key === statusAtual || (statusAtual === 'Reprovado' && etapa.key === 'Em análise'),
+      ativo: index === indiceAtual,
     }));
-  };
-
-  const simularEnvioNotificacao = (novoStatus: string) => {
-    console.log(`[PUSH NOTIFICATION] Para: ${solicitacao.adotante.email}. Status: ${novoStatus}.`);
   };
 
   const atualizarStatusGeral = async (novoStatus: string) => {
@@ -209,8 +173,7 @@ export default function DetalhesSolicitacaoONG() {
 
       setSolicitacao((prev: any) => ({ ...prev, status: novoStatus }));
       setModalStatusVisivel(false);
-      simularEnvioNotificacao(novoStatus);
-      Alert.alert('Status Atualizado', `O processo agora esta na etapa: ${novoStatus}. O adotante foi notificado.`);
+      Alert.alert('Status Atualizado', `O processo agora esta na etapa: ${novoStatus}.`);
     } catch {
       Alert.alert('Erro', 'Nao foi possivel atualizar o status no banco.');
     }
@@ -568,7 +531,7 @@ export default function DetalhesSolicitacaoONG() {
                     styles.modalOptionRow,
                     {
                       backgroundColor: isDark ? '#242424' : '#F8F9FB',
-                      borderColor: solicitacao.status === key ? primaryColor : 'transparent',
+                      borderColor: getStatusConfig(solicitacao.status).status === getStatusConfig(key).status ? primaryColor : 'transparent',
                       borderWidth: 1
                     }
                   ]}
@@ -577,10 +540,10 @@ export default function DetalhesSolicitacaoONG() {
                   <View style={[styles.modalOptionIconWrapper, { backgroundColor: `${statusConfig[key].color}20` }]}>
                     <Ionicons name={statusConfig[key].icon} size={18} color={statusConfig[key].color} />
                   </View>
-                  <Text style={[styles.modalOptionLabel, { color: isDark ? '#FFFFFF' : '#333333', fontWeight: solicitacao.status === key ? '700' : '500' }]}>
+                  <Text style={[styles.modalOptionLabel, { color: isDark ? '#FFFFFF' : '#333333', fontWeight: getStatusConfig(solicitacao.status).status === getStatusConfig(key).status ? '700' : '500' }]}>
                     {statusConfig[key].label}
                   </Text>
-                  {solicitacao.status === key && (
+                  {getStatusConfig(solicitacao.status).status === getStatusConfig(key).status && (
                     <Ionicons name="checkmark-circle" size={20} color={primaryColor} style={{ marginLeft: 'auto' }} />
                   )}
                 </TouchableOpacity>

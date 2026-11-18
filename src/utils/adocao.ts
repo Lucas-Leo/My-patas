@@ -26,6 +26,30 @@ export type Etapa2Adocao = {
   ambiente: string;
 };
 
+export function calcularIdadeUsuario(nascimento: unknown, hoje = new Date()): string {
+  if (typeof nascimento !== 'string') return '';
+  const iso = nascimento.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const br = nascimento.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!iso && !br) return '';
+  const [ano, mes, dia] = iso ? [+iso[1], +iso[2], +iso[3]] : [+br![3], +br![2], +br![1]];
+  const date = new Date(ano, mes - 1, dia);
+  if (date.getFullYear() !== ano || date.getMonth() !== mes - 1 || date.getDate() !== dia || date > hoje) return '';
+  const idade = hoje.getFullYear() - ano - (hoje.getMonth() + 1 < mes || (hoje.getMonth() + 1 === mes && hoje.getDate() < dia) ? 1 : 0);
+  return String(idade);
+}
+
+export function etapa1Completa(data: Etapa1Adocao) {
+  return Object.values(data).every(value => value.trim().length > 0)
+    && /^\d+$/.test(data.idade) && Number(data.idade) >= 18
+    && data.telefone.replace(/\D/g, '').length >= 10;
+}
+
+export function etapa2Completa(data: Etapa2Adocao) {
+  return !!(data.motivacao && data.experiencia && data.apoioFamilia && data.rotina && data.financeiro && data.ambiente
+    && (data.motivacao !== 'outro' || data.motivacaoOutro.trim())
+    && (data.experiencia !== 'sim' || data.experienciaTexto.trim()));
+}
+
 export type ApiSolicitacaoAdocao = {
   id?: number;
   idsolicitacao?: number;
@@ -134,50 +158,26 @@ export function montarExperiencia(etapa2: Etapa2Adocao) {
 }
 
 export function getStatusConfig(status?: string | null) {
-  const normalized = status || "Solicitacao enviada";
-
-  if (normalized === "Em analise" || normalized === "Em análise") {
-    return {
-      status: "Em analise",
-      statusColor: "#F7B500",
-      statusBg: "#FFF6D8",
-      icon: "time-outline",
-    };
+  const value = (status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  let label = status || 'Solicitacao enviada', color = '#3B82F6', bg = '#DBEAFE', icon = 'paper-plane-outline', step = 0;
+  if (value.includes('reprov') || value.includes('nao aprovad') || value.includes('rejeitad') || value.includes('cancelad')) {
+    label = value.includes('cancel') ? 'Cancelada' : 'Nao aprovado'; color = '#EF4444'; bg = '#FEE2E2'; icon = 'close-circle-outline'; step = -1;
+  } else if (value.includes('entregue') || value.includes('finaliz') || value.includes('concluid')) {
+    label = 'Entregue'; color = '#EC4899'; bg = '#FCE7F3'; icon = 'heart-outline'; step = 5;
+  } else if (value.includes('aprovad')) {
+    label = 'Aprovado'; color = '#22C55E'; bg = '#DCFCE7'; icon = 'checkmark-circle-outline'; step = 4;
+  } else if (value.includes('visita')) {
+    label = 'Visita agendada'; color = '#3B82F6'; bg = '#EFF6FF'; icon = 'home-outline'; step = 3;
+  } else if (value.includes('document')) {
+    label = 'Aguardando documentos'; color = '#F59E0B'; bg = '#FEF3C7'; icon = 'document-outline'; step = 3;
+  } else if (value.includes('entrevista')) {
+    label = 'Entrevista agendada'; color = '#8B5CF6'; bg = '#EFE7FF'; icon = 'calendar-outline'; step = 2;
+  } else if (value.includes('analise')) {
+    label = 'Em analise'; color = '#F7B500'; bg = '#FFF6D8'; icon = 'time-outline'; step = 1;
+  } else if (!value || value.includes('nova') || value.includes('solicitacao')) {
+    label = 'Solicitacao enviada';
   }
-
-  if (normalized === "Entrevista agendada") {
-    return {
-      status: normalized,
-      statusColor: "#8B5CF6",
-      statusBg: "#EFE7FF",
-      icon: "calendar-outline",
-    };
-  }
-
-  if (normalized === "Aprovado" || normalized === "Aprovada") {
-    return {
-      status: "Aprovado",
-      statusColor: "#22C55E",
-      statusBg: "#DCFCE7",
-      icon: "checkmark-circle-outline",
-    };
-  }
-
-  if (normalized === "Reprovado" || normalized === "Nao aprovado") {
-    return {
-      status: "Nao aprovado",
-      statusColor: "#EF4444",
-      statusBg: "#FEE2E2",
-      icon: "close-circle-outline",
-    };
-  }
-
-  return {
-    status: normalized,
-    statusColor: "#3B82F6",
-    statusBg: "#DBEAFE",
-    icon: "paper-plane-outline",
-  };
+  return { status: label, statusColor: color, statusBg: bg, icon, step };
 }
 
 export function formatarDataAdocao(value?: string | null) {

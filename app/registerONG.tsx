@@ -1,3 +1,4 @@
+import { apiErrorMessage } from "../src/utils/apiError";
 import {
   Image,
   ScrollView,
@@ -264,7 +265,6 @@ export default function RegisterONG(){
       setLoading(true);
       const cnpjLimpo = cnpj.replace(/\D/g, "");
       // const resultadoAPI = await verificarCNPJNoRegistro(cnpjLimpo);
-      setLoading(false);
 
       // if (!resultadoAPI.valido) {
       //   abrirModal("CNPJ Inválido/Inativo", resultadoAPI.mensagem);
@@ -310,7 +310,7 @@ export default function RegisterONG(){
           fk_idendereco: sessaoAtual.usuario.fk_idendereco,
           comp_estatuto: null,
           comp_cnpj: null,
-          email: login,
+          email: login.trim().toLowerCase(),
           senha: password,
           fk_idtipo: 4,
         },
@@ -333,7 +333,7 @@ export default function RegisterONG(){
         id_usuario_responsavel: sessaoAtual.usuario.id || sessaoAtual.usuario.idusuario,
         id_responsavel: response.data?.id_vinculo_responsavel || null,
         nome,
-        email: login,
+        email: login.trim().toLowerCase(),
         telefone: celular,
         descricao: descricaoPadrao,
         endereco: sessaoAtual.usuario.endereco,
@@ -390,8 +390,10 @@ export default function RegisterONG(){
       console.log("Erro no processo:", error)
       abrirModal(
         "Erro",
-        "Ocorreu um problema durante o processo."
+        apiErrorMessage(error, "Não foi possível cadastrar a ONG.")
       )
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -436,6 +438,9 @@ export default function RegisterONG(){
               style={styles.input}
               placeholder="E-mail"
               onChangeText={(value)=>setLogin(value)}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
               value={login}
             />
           </View>
@@ -475,7 +480,6 @@ export default function RegisterONG(){
                 onChangeText={(value)=>setPassword(value)}
                 value={password}
                 secureTextEntry={!showPassword}
-                maxLength={8}
               />
               <TouchableOpacity
                 onPress={()=>setShowPassword(!showPassword)}
@@ -500,7 +504,6 @@ export default function RegisterONG(){
                 onChangeText={(value)=>setPassword2(value)}
                 value={password2}
                 secureTextEntry={!showConfirmPassword}
-                maxLength={8}
               />
               <TouchableOpacity
                 onPress={()=>setShowConfirmPassword(!showConfirmPassword)}

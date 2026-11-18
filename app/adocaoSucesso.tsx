@@ -13,7 +13,7 @@ import {
 
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeContext } from '@/context/ThemeContext';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AdoptionPet,
   getPetDisplayName,
@@ -41,7 +41,7 @@ export default function AdocaoSucesso() {
   const petImageUri = getPetImageUri(pet);
   const petImage = petImageUri
     ? { uri: petImageUri }
-    : require('@/assets/images/cachorro01.jpg');
+    : require('@/assets/images/LogoPataAzul.png');
 
   // ANIMAÇÕES
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -75,7 +75,7 @@ export default function AdocaoSucesso() {
       }),
     ]).start();
 
-    Animated.loop(
+    const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
           toValue: 1.06,
@@ -89,8 +89,10 @@ export default function AdocaoSucesso() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
-  }, []);
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [fadeAnim, pulseAnim, scaleAnim, slideAnim]);
 
   const animateButton = () => {
     Animated.sequence([
@@ -115,6 +117,8 @@ export default function AdocaoSucesso() {
     }, 180);
   };
 
+  if (!pet.id || !params.idSolicitacao) return <Redirect href="/acompanharAdocao" />;
+
   return (
     <SafeAreaView
       style={[
@@ -135,7 +139,7 @@ export default function AdocaoSucesso() {
         <View style={styles.header}>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.back()}
+            onPress={() => router.replace('/acompanharAdocao')}
             style={[
               styles.backButton,
               {
